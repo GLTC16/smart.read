@@ -1,95 +1,79 @@
-'use client';
+"use client";
 
-import { Document, Page, pdfjs } from 'react-pdf';
-import { useStore } from '@/store/useStore';
-import { useMemo, useEffect, useRef } from 'react';
-import PageCounter from './PageCounter';
-import 'react-pdf/dist/Page/AnnotationLayer.css';
-import 'react-pdf/dist/Page/TextLayer.css';
+import { useState, useEffect, useRef } from "react";
+import { Document, Page, pdfjs } from "react-pdf";
+import { useStore } from "@/store/useStore";
+import { Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 
-// Configure Worker
+import "react-pdf/dist/Page/AnnotationLayer.css";
+import "react-pdf/dist/Page/TextLayer.css";
+
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 export default function PDFViewer() {
-    const { currentFile, currentPage, totalPages, setTotalPages, setSelectedText, setSelectionPosition } = useStore();
+    const { currentFile, setCurrentPage, setTotalPages, currentPage, totalPages } = useStore();
+    const [pageWidth, setPageWidth] = useState(600);
     const containerRef = useRef<HTMLDivElement>(null);
-
-    // Handle Selection in PDF
-    useEffect(() => {
-        const handleSelection = () => {
-            const selection = window.getSelection();
-            if (!selection || selection.rangeCount === 0) return;
-
-            const text = selection.toString().trim();
-
-            // Check if selection is inside our PDF container
-            if (containerRef.current && !containerRef.current.contains(selection.anchorNode)) {
-                return;
-            }
-
-            if (text) {
-                const range = selection.getRangeAt(0);
-                const rect = range.getBoundingClientRect();
-
-                // Store relative to viewport
-                setSelectionPosition({
-                    x: rect.left + (rect.width / 2),
-                    y: rect.top
-                });
-                setSelectedText(text);
-            }
-        };
-
-        // We listen on the document because the selection might start inside but events bubble up.
-        // Actually 'selectionchange' is a document-level event.
-        document.addEventListener('selectionchange', handleSelection);
-
-        // Also handle clearing when clicking away
-        const handleClick = () => {
-            const selection = window.getSelection();
-            if (selection?.isCollapsed) {
-                setSelectedText(null);
-                setSelectionPosition(null);
-            }
-        };
-        document.addEventListener('mouseup', handleClick);
-
-        return () => {
-            document.removeEventListener('selectionchange', handleSelection);
-            document.removeEventListener('mouseup', handleClick);
-        };
-    }, [setSelectedText, setSelectionPosition]);
-
-    const fileUrl = useMemo(() => {
-        if (currentFile instanceof File) {
-            return URL.createObjectURL(currentFile);
-        }
-        return currentFile as string;
-    }, [currentFile]);
 
     function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
         setTotalPages(numPages);
+        setCurrentPage(1);
     }
 
+    // TRUCO PRO: Calcular el ancho disponible de la pantalla
+    useEffect(() => {
+        const updateWidth = () => {
+            if (containerRef.current) {
+                // Le restamos un poco de margen (32px) para que no toque los bordes
+                setPageWidth(containerRef.current.clientWidth - 20);
+            }
+        };
+
+        // Medir al inicio y cuando se gire el móvil
+        updateWidth();
+        window.addEventListener('resize', updateWidth);
+        return () => window.removeEventListener('resize', updateWidth);
+    }, []);
+
+    const changePage = (offset: number) => {
+        const newPage = currentPage + offset;
+        if (newPage >= 1 && newPage <= totalPages) setCurrentPage(newPage);
+    };
+
+    if (!currentFile) return null;
+
     return (
-        <div
-            ref={containerRef}
-            className="flex justify-center bg-slate-100 min-h-screen pt-8 pb-32 overflow-auto relative custom-scrollbar"
-        >
-            <Document
-                file={fileUrl}
-                onLoadSuccess={onDocumentLoadSuccess}
-                className="shadow-xl"
-            >
-                <Page
-                    pageNumber={currentPage}
-                    width={800}
-                    renderTextLayer={true}
-                    renderAnnotationLayer={true}
-                    className="mb-8"
-                />
-            </Document>
-            <PageCounter current={currentPage} total={totalPages} type="page" />
+        <div ref={containerRef} className="flex flex-col items-center gap-4 relative w-full px-2">
+            
+            {/* Controles flotantes */}
+            <div className="flex justify-between w-full max-w-2xl mb-2">
+                <button onClick={() => changePage(-1)} disabled={currentPage <= 1} className="p-2 bg-white rounded-full shadow border disabled:opacity-50">
+                    <ChevronLeft className="w-6 h-6" />
+                </button>
+                <button onClick={() => changePage(1)} disabled={currentPage >= totalPages} className="p-2 bg-white rounded-full shadow border disabled:opacity-50">
+                    <ChevronRight className="w-6 h-6" />
+                </button>
+            </div>
+
+            <div className="border rounded-lg overflow-hidden shadow-lg bg-gray-500 w-full flex justify-center">
+                <Document
+                    file={currentFile}
+                    onLoadSuccess={onDocumentLoadSuccess}
+                    loading={<Loader2 className="w-10 h-10 animate-spin text-white m-10" />}
+                    error={<div className="p-4 text-white">Error cargando PDF.</div>}
+                >
+                    <Page 
+                        pageNumber={currentPage} 
+                        scale={1.0}
+                        width={pageWidth} // AQUÍ ESTÁ LA MAGIA RESPONSIVE
+                        renderTextLayer={true}
+                        renderAnnotationLayer={false}
+                    />
+                </Document>
+            </div>
+            
+            {/* Espacio extra abajo para que el dedo no tape el texto */}
+            <div className="h-24"></div>
         </div>
     );
 }
