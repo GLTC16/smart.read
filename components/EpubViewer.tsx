@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useRef } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { ReactReader } from "react-reader";
 import { useStore } from "@/store/useStore";
 import { Loader2 } from "lucide-react";
@@ -21,17 +21,25 @@ export default function EpubViewer() {
     const [isReaderReady, setIsReaderReady] = useState(false);
     const renditionRef = useRef<any>(null);
 
-    // SOLUCIÓN SCROLL: Usamos 'paginated' que es más estable en móviles
+    // OPCIONES: Usamos 'paginated' para mejor rendimiento en móviles
     const epubOptions = useMemo(() => ({
-        flow: "paginated", // Mucho mejor rendimiento que 'scrolled'
+        flow: "paginated", 
         manager: "default",
         width: "100%",
         height: "100%",
     }), []);
 
+    // --- CORRECCIÓN DEL ERROR DE BUILD ---
+    // Verificamos explícitamente que sea un File antes de usar createObjectURL
     const url = useMemo(() => {
         if (!currentFile) return null;
-        return URL.createObjectURL(currentFile);
+        
+        if (currentFile instanceof File) {
+            return URL.createObjectURL(currentFile);
+        }
+        
+        // Si por alguna razón es un string, lo devolvemos tal cual para que TS no se queje
+        return currentFile as string;
     }, [currentFile]);
 
     const onLocationChanged = useCallback((loc: string | number) => {
@@ -39,7 +47,7 @@ export default function EpubViewer() {
         if (typeof loc === "string") {
             setCurrentLocation(loc);
             
-            // Calculador de página aproximada
+            // Calcular número de página aproximado
             if (renditionRef.current?.locations?.length() > 0) {
                 const current = renditionRef.current.currentLocation();
                 if (current?.start) {
@@ -54,21 +62,26 @@ export default function EpubViewer() {
         renditionRef.current = rendition;
         setIsReaderReady(true);
 
+        // Estilos para lectura cómoda
         rendition.themes.default({
-            body: { "font-family": "Helvetica, Arial, sans-serif", "font-size": "110%", "padding": "0 10px" },
+            body: { 
+                "font-family": "Helvetica, Arial, sans-serif", 
+                "font-size": "110%", 
+                "padding": "0 10px" 
+            },
             p: { "line-height": "1.6" }
         });
 
         if (currentLocation) rendition.display(currentLocation);
 
-        // Generar páginas para el contador
+        // Generar paginación (puede tardar un poco)
         rendition.ready.then(() => {
             return rendition.locations.generate(1000);
         }).then((locations: any) => {
             setTotalPages(locations.length);
         });
 
-        // SOLUCIÓN TRADUCCIÓN: Detectar selección DENTRO del Iframe
+        // --- LÓGICA DE TRADUCCIÓN PARA IFRAME ---
         rendition.on("selected", (cfiRange: string, contents: any) => {
             const selection = contents.window.getSelection();
             const text = selection.toString().trim();
@@ -77,8 +90,8 @@ export default function EpubViewer() {
                 const range = selection.getRangeAt(0);
                 const rect = range.getBoundingClientRect();
                 
-                // Truco matemático: Sumamos la posición del Iframe + la posición del texto
-                const iframe = document.querySelector("iframe"); 
+                // Calculamos la posición real sumando el offset del iframe
+                const iframe = document.querySelector("div.react-reader iframe"); 
                 const iframeRect = iframe?.getBoundingClientRect();
 
                 if (iframeRect) {
@@ -91,10 +104,11 @@ export default function EpubViewer() {
             }
         });
 
-        // Limpiar selección al tocar en otro lado
+        // Limpiar selección al tocar fuera (opcional)
         rendition.on("click", () => {
-            // Si quieres que se cierre el tooltip al hacer click fuera:
-            // useStore.getState().resetSelection(); 
+             // Si deseas limpiar la selección al hacer click:
+             // setSelectedText("");
+             // setSelectionPosition(null);
         });
 
     }, [currentLocation, setTotalPages, setSelectedText, setSelectionPosition]);
@@ -106,6 +120,7 @@ export default function EpubViewer() {
             {!isReaderReady && (
                 <div className="absolute inset-0 z-10 flex items-center justify-center bg-gray-50">
                     <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                    <span className="ml-2 text-gray-500 font-medium">Cargando libro...</span>
                 </div>
             )}
             
