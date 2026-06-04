@@ -87,7 +87,7 @@ export default function PDFViewer() {
     useEffect(() => {
         const calculateWidth = () => {
             if (typeof window === 'undefined') return;
-            setBaseWidth(isMobile ? window.innerWidth - 32 : 800);
+            setBaseWidth(isMobile ? window.innerWidth : 800);
         };
         calculateWidth();
         window.addEventListener('resize', calculateWidth);
@@ -190,7 +190,7 @@ export default function PDFViewer() {
         >
             <div
                 ref={containerRef}
-                className="flex justify-center pt-8 pb-32 relative min-w-max"
+                className="flex justify-center pt-8 pb-32 relative w-full"
                 onTouchStart={handleTouchStart}
                 onTouchEnd={handleTouchEnd}
             >

@@ -169,17 +169,14 @@ export default function Home() {
             >
               {/* Logo */}
               <div
-                className="p-4 rounded-2xl mb-6"
+                className="p-4 rounded-3xl mb-6"
                 style={{
                   background: "rgba(99,102,241,0.12)",
                   border: "1px solid rgba(99,102,241,0.28)",
                   boxShadow: "0 0 48px rgba(99,102,241,0.22), 0 0 96px rgba(99,102,241,0.08)",
                 }}
               >
-                <BookOpen
-                  className="w-10 h-10"
-                  style={{ color: "var(--accent-hover)" }}
-                />
+                <img src="/icon.png" alt="Smart Read Logo" className="w-14 h-14 object-contain rounded-xl" />
               </div>
 
               {/* Title */}

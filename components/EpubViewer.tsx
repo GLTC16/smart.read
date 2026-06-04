@@ -163,8 +163,9 @@ export default function EpubViewer() {
                             const range = selection.getRangeAt(0);
                             const rect = range.getBoundingClientRect();
                             
-                            // 1. Avoid Cross-Origin frameElement errors by getting the iframe from the parent DOM
-                            const iframe = containerRef.current?.querySelector('iframe');
+                            // 1. Avoid Cross-Origin frameElement errors by getting the iframe from the parent DOM if possible,
+                            // but prioritize contents.window.frameElement since continuous mode uses multiple iframes.
+                            const iframe = (epubContents.window.frameElement as HTMLIFrameElement) || containerRef.current?.querySelector('iframe');
                             if (!iframe) return;
                             
                             const iframeRect = iframe.getBoundingClientRect();
@@ -176,7 +177,7 @@ export default function EpubViewer() {
                             });
                         }
                     } catch (e) { console.error("Manual epub selection error:", e); }
-                }, 50);
+                }, 200);
             };
 
             // 2. Bypass epub.js debouncing entirely to catch fleeting mobile selections
@@ -194,7 +195,7 @@ export default function EpubViewer() {
                     if (!text) return;
                     
                     const rect = range.getBoundingClientRect();
-                    const iframe = containerRef.current?.querySelector('iframe');
+                    const iframe = (contents.window.frameElement as HTMLIFrameElement) || containerRef.current?.querySelector('iframe');
                     const iframeRect = iframe ? iframe.getBoundingClientRect() : { left: 0, top: 0 };
                     
                     setSelectedText(text);
@@ -203,8 +204,7 @@ export default function EpubViewer() {
                         y: iframeRect.top + rect.top,
                     });
                     
-                    // Clear native selection so it doesn't get stuck
-                    contents.window.getSelection().removeAllRanges();
+                    // Do NOT remove ranges, it causes mobile to lose the visual highlight
                 }).catch(() => {});
             } catch (e) {
                 console.error("Native epub selection error:", e);
