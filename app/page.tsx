@@ -358,13 +358,29 @@ export default function Home() {
               ))}
             </div>
 
-            {/* Footer note */}
-            <p
-              className="relative z-10 text-xs mt-6 pb-5 text-center"
-              style={{ color: "var(--text-disabled)" }}
-            >
-              {t.footerNote}
-            </p>
+            {/* Footer note + legal links */}
+            <div className="relative z-10 mt-6 pb-6 text-center space-y-2">
+              <p className="text-xs" style={{ color: "var(--text-disabled)" }}>
+                {t.footerNote}
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+                {[
+                  { href: '/about', label: 'Sobre Nosotros' },
+                  { href: '/privacy', label: 'Privacidad' },
+                  { href: '/terms', label: 'Términos' },
+                  { href: '/contact', label: 'Contacto' },
+                ].map(({ href, label }) => (
+                  <a
+                    key={href}
+                    href={href}
+                    className="text-xs transition-colors hover:underline"
+                    style={{ color: 'var(--text-disabled)' }}
+                  >
+                    {label}
+                  </a>
+                ))}
+              </div>
+            </div>
           </div>
         ) : (
           /* ── READER VIEW ─────────────────────────────────── */

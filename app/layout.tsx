@@ -18,36 +18,98 @@ const lora = Lora({
   display: "swap",
 });
 
+const BASE_URL = "https://smart-read-rouge.vercel.app";
+
 export const metadata: Metadata = {
-  title: "SmartRead — Tu lector inteligente",
+  metadataBase: new URL(BASE_URL),
+  title: {
+    default: "SmartRead — Lector PDF, EPUB y TXT con traducción instantánea",
+    template: "%s — SmartRead",
+  },
   description:
-    "Lee PDFs, EPUBs y TXTs con traducción instantánea integrada. El lector perfecto para estudiantes que quieren leer más rápido y entender mejor.",
-  keywords: ["lector PDF", "lector EPUB", "traducción", "estudiantes", "SmartRead", "leer online"],
-  authors: [{ name: "SmartRead" }],
+    "SmartRead: lee PDFs, EPUBs y TXTs directamente en tu navegador con traducción instantánea en 8 idiomas. Gratis, privado y sin instalaciones. Ideal para estudiantes.",
+  keywords: [
+    "lector PDF online gratis",
+    "lector EPUB online",
+    "lector TXT",
+    "traducción instantánea",
+    "leer PDF sin descargar",
+    "SmartRead",
+    "traductor de libros",
+    "estudiantes idiomas",
+    "reader online",
+    "leer EPUB en el navegador",
+  ],
+  authors: [{ name: "SmartRead", url: BASE_URL }],
+  creator: "SmartRead",
+  publisher: "SmartRead",
+  alternates: {
+    canonical: BASE_URL,
+  },
   openGraph: {
-    title: "SmartRead — Tu lector inteligente",
+    title: "SmartRead — Lector inteligente con traducción instantánea",
     description:
-      "Lee PDFs, EPUBs y TXTs con traducción instantánea. Lee más rápido. Entiende mejor.",
+      "Lee PDFs, EPUBs y TXTs con traducción instantánea. Gratis, privado, sin instalaciones.",
+    url: BASE_URL,
     type: "website",
     locale: "es_ES",
     siteName: "SmartRead",
+    images: [
+      {
+        url: `${BASE_URL}/og-image.png`,
+        width: 1200,
+        height: 630,
+        alt: "SmartRead — Lector inteligente",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "SmartRead — Tu lector inteligente",
-    description: "Lee PDFs, EPUBs y TXTs con traducción instantánea integrada.",
+    title: "SmartRead — Lee más rápido. Entiende mejor.",
+    description: "Lector web gratuito para PDF, EPUB y TXT con traducción instantánea en 8 idiomas.",
+    images: [`${BASE_URL}/og-image.png`],
   },
   robots: {
     index: true,
     follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
   },
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
+  },
+  category: "education",
 };
 
+// Allow pinch-zoom — required for WCAG accessibility + AdSense policy
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+};
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  name: "SmartRead",
+  url: BASE_URL,
+  description: "Lector web gratuito para PDF, EPUB y TXT con traducción instantánea integrada.",
+  applicationCategory: "EducationApplication",
+  operatingSystem: "Web",
+  offers: { "@type": "Offer", price: "0", priceCurrency: "EUR" },
+  featureList: [
+    "Leer PDF en el navegador",
+    "Leer EPUB en el navegador",
+    "Traducción instantánea de texto",
+    "Almacenamiento en la nube",
+    "100% privado",
+    "Sin instalaciones",
+  ],
+  inLanguage: ["es", "en", "it", "fr", "de", "pt", "ja", "zh"],
 };
 
 export default async function RootLayout({
@@ -55,17 +117,28 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const adsenseId = process.env.NEXT_PUBLIC_ADSENSE_ID || "pub-XXXXXXXXXXXXXX";
+  const adsenseId = process.env.NEXT_PUBLIC_ADSENSE_ID;
+  const hasValidAdsense = adsenseId && !adsenseId.includes("XXXXX");
+
   const cookieStore = await cookies();
   const consent = cookieStore.get("gdpr_consent")?.value;
   const hasAdsConsent = consent === "accepted";
 
   return (
     <html lang="es" className={`${inter.variable} ${lora.variable}`}>
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+        {/* Preconnect to ad networks only with consent — handled client-side */}
+      </head>
       <body className={`${inter.className} antialiased`}>
         <Navbar />
         {children}
-        {hasAdsConsent && (
+
+        {/* AdSense — only load if consent given AND valid publisher ID */}
+        {hasAdsConsent && hasValidAdsense && (
           <Script
             async
             src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseId}`}
@@ -73,6 +146,7 @@ export default async function RootLayout({
             strategy="afterInteractive"
           />
         )}
+
         <GDPRBanner />
       </body>
     </html>
