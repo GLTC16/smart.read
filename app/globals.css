@@ -1,26 +1,334 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap');
 @import "tailwindcss";
 
+/* ============================================================
+   DESIGN TOKENS — SmartRead Premium Dark Theme
+   ============================================================ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+    /* Backgrounds */
+    --bg-base: #0a0a0f;
+    --bg-surface: #0f0f1a;
+    --bg-elevated: #141428;
+    --bg-card: #1a1a30;
+    --bg-hover: #20203a;
+
+    /* Accent — Indigo/Violet */
+    --accent: #6366f1;
+    --accent-hover: #818cf8;
+    --accent-subtle: rgba(99, 102, 241, 0.12);
+    --accent-glow: rgba(99, 102, 241, 0.4);
+
+    /* Accent 2 — Teal */
+    --teal: #14b8a6;
+    --teal-hover: #2dd4bf;
+    --teal-subtle: rgba(20, 184, 166, 0.12);
+    --teal-glow: rgba(20, 184, 166, 0.35);
+
+    /* Text */
+    --text-primary: #f1f0ff;
+    --text-secondary: #a8a6c8;
+    --text-muted: #6b6a8a;
+    --text-disabled: #3d3c5a;
+
+    /* Borders */
+    --border: rgba(255, 255, 255, 0.08);
+    --border-subtle: rgba(255, 255, 255, 0.04);
+    --border-accent: rgba(99, 102, 241, 0.3);
+
+    /* Gradients */
+    --gradient-hero: linear-gradient(135deg, #0a0a1a 0%, #130d2e 40%, #0d1a1f 100%);
+    --gradient-accent: linear-gradient(135deg, #6366f1, #8b5cf6, #14b8a6);
+    --gradient-card: linear-gradient(145deg, rgba(99,102,241,0.08) 0%, rgba(20,184,166,0.05) 100%);
+
+    /* Glassmorphism */
+    --glass-bg: rgba(15, 15, 30, 0.75);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+
+    /* Typography */
+    --font-ui: 'Inter', system-ui, sans-serif;
+    --font-reading: 'Lora', Georgia, serif;
+
+    /* Transitions */
+    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-smooth: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
+*, *::before, *::after {
+    box-sizing: border-box;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+    scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+    background: var(--bg-base);
+    color: var(--text-primary);
+    font-family: var(--font-ui);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: background var(--transition-smooth), color var(--transition-smooth);
+    min-height: 100vh;
+}
+
+/* ============================================================
+   READING PROGRESS BAR
+   ============================================================ */
+#reading-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 3px;
+    background: var(--gradient-accent);
+    z-index: 9999;
+    transition: width 0.2s ease;
+    border-radius: 0 2px 2px 0;
+    box-shadow: 0 0 12px var(--accent-glow);
+}
+
+/* ============================================================
+   CUSTOM SCROLLBAR
+   ============================================================ */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-surface);
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(99, 102, 241, 0.35);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(99, 102, 241, 0.6);
+}
+
+/* ============================================================
+   GLASSMORPHISM UTILITIES
+   ============================================================ */
+.glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+}
+
+.glass-card {
+    background: rgba(20, 20, 48, 0.6);
+    backdrop-filter: blur(24px) saturate(160%);
+    -webkit-backdrop-filter: blur(24px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255,255,255,0.05);
+}
+
+.glass-panel {
+    background: rgba(10, 10, 20, 0.85);
+    backdrop-filter: blur(32px);
+    -webkit-backdrop-filter: blur(32px);
+    border: 1px solid var(--border);
+}
+
+/* ============================================================
+   GRADIENT TEXT
+   ============================================================ */
+.gradient-text {
+    background: var(--gradient-accent);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* ============================================================
+   GLOW EFFECTS
+   ============================================================ */
+.glow-accent {
+    box-shadow: 0 0 20px var(--accent-glow), 0 0 60px rgba(99, 102, 241, 0.15);
+}
+
+.glow-teal {
+    box-shadow: 0 0 20px var(--teal-glow), 0 0 60px rgba(20, 184, 166, 0.15);
+}
+
+.text-glow-accent {
+    text-shadow: 0 0 20px var(--accent-glow);
+}
+
+/* ============================================================
+   ANIMATIONS
+   ============================================================ */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(24px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.92);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes shimmer {
+    0% { background-position: -200% center; }
+    100% { background-position: 200% center; }
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    33% { transform: translateY(-20px) rotate(3deg); }
+    66% { transform: translateY(-10px) rotate(-2deg); }
+}
+
+@keyframes pulse-glow {
+    0%, 100% { opacity: 0.4; box-shadow: 0 0 20px var(--accent-glow); }
+    50% { opacity: 0.8; box-shadow: 0 0 40px var(--accent-glow), 0 0 80px rgba(99,102,241,0.2); }
+}
+
+@keyframes orbit {
+    from { transform: rotate(0deg) translateX(120px) rotate(0deg); }
+    to { transform: rotate(360deg) translateX(120px) rotate(-360deg); }
+}
+
+@keyframes gradientShift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+}
+
+@keyframes pulse-border {
+    0%, 100% { border-color: rgba(99,102,241,0.22); box-shadow: none; }
+    50% { border-color: rgba(99,102,241,0.45); box-shadow: 0 0 24px rgba(99,102,241,0.18); }
+}
+
+@keyframes spin-slow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes badge-in {
+    from { opacity: 0; transform: translateY(6px) scale(0.92); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes tooltipIn {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(8px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0) scale(1);
+    }
+}
+
+/* Animation utility classes */
+.animate-fade-in {
+    animation: fadeIn 0.4s ease forwards;
+}
+
+.animate-slide-up {
+    animation: slideUp 0.5s ease forwards;
+}
+
+.animate-scale-in {
+    animation: scaleIn 0.3s ease forwards;
+}
+
+.animate-float {
+    animation: float 6s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+    animation: pulse-glow 3s ease-in-out infinite;
+}
+
+.animate-shimmer {
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+}
+
+.animate-tooltip-in {
+    animation: tooltipIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* ============================================================
+   READING FONT
+   ============================================================ */
+.font-reading {
+    font-family: var(--font-reading);
+}
+
+/* ============================================================
+   DRAG ZONE EFFECT
+   ============================================================ */
+.drag-active {
+    border-color: var(--accent) !important;
+    background: var(--accent-subtle) !important;
+    box-shadow: 0 0 0 4px rgba(99,102,241,0.22), 0 0 48px rgba(99,102,241,0.18), inset 0 0 40px rgba(99,102,241,0.08) !important;
+}
+
+.dropzone-idle {
+    animation: pulse-border 4s ease-in-out infinite;
+}
+
+/* ============================================================
+   MISC UTILITIES
+   ============================================================ */
+.text-balance {
+    text-wrap: balance;
+}
+
+.interactive-scale {
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+.interactive-scale:hover {
+    transform: translateY(-3px) scale(1.025);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+}
+.interactive-scale:active {
+    transform: scale(0.97);
+}
+
+/* Stagger utilities for sequential card animations */
+.stagger-1 { animation-delay: 0ms; }
+.stagger-2 { animation-delay: 80ms; }
+.stagger-3 { animation-delay: 160ms; }
+
+/* Gradient border utility */
+.gradient-border {
+    position: relative;
+}
+.gradient-border::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    background: var(--gradient-accent);
+    z-index: -1;
+    opacity: 0.4;
 }
