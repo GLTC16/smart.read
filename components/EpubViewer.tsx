@@ -131,9 +131,10 @@ export default function EpubViewer() {
         } catch { /* silent */ }
 
         // Improve typography and ensure smooth scrolling inside EPUB iframe
-        rendition.hooks.content.register((contents: { document: Document }) => {
+        rendition.hooks.content.register((contents: { document: Document; window: Window }) => {
             const doc = contents.document;
-            if (!doc) return;
+            const win = contents.window;
+            if (!doc || !win) return;
             const style = doc.createElement('style');
             style.textContent = `
                 body {
@@ -150,40 +151,69 @@ export default function EpubViewer() {
             `;
             doc.head.appendChild(style);
 
-            // Manual selection handler to bypass epubjs mobile bugs
+            // 1. Bulletproof manual selection handler with proper debouncing
+            let selectionTimeout: NodeJS.Timeout;
             const handleSelection = () => {
-                setTimeout(() => {
+                clearTimeout(selectionTimeout);
+                selectionTimeout = setTimeout(() => {
                     try {
-                        const epubContents = contents as unknown as EpubContents;
-                        const selection = epubContents.window.getSelection();
+                        const selection = win.getSelection();
                         if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return;
                         
                         const text = selection.toString().trim();
-                        if (text) {
-                            const range = selection.getRangeAt(0);
-                            const rect = range.getBoundingClientRect();
-                            
-                            // 1. Avoid Cross-Origin frameElement errors by getting the iframe from the parent DOM if possible,
-                            // but prioritize contents.window.frameElement since continuous mode uses multiple iframes.
-                            const iframe = (epubContents.window.frameElement as HTMLIFrameElement) || containerRef.current?.querySelector('iframe');
-                            if (!iframe) return;
-                            
-                            const iframeRect = iframe.getBoundingClientRect();
-
-                            setSelectedText(text);
-                            setSelectionPosition({
-                                x: iframeRect.left + rect.left + rect.width / 2,
-                                y: iframeRect.top + rect.top,
-                            });
+                        if (!text) return;
+                        
+                        const range = selection.getRangeAt(0);
+                        const rect = range.getBoundingClientRect();
+                        
+                        // --- SAFE IFRAME DISCOVERY ---
+                        let iframe: HTMLIFrameElement | null = null;
+                        
+                        try {
+                            // Try direct access (throws SecurityError on some cross-origin/blob setups)
+                            iframe = win.frameElement as HTMLIFrameElement;
+                        } catch (err) {
+                            // Suppress SecurityError
                         }
-                    } catch (e) { console.error("Manual epub selection error:", e); }
-                }, 200);
+
+                        // Fallback: search DOM for matching contentWindow
+                        if (!iframe && containerRef.current) {
+                            const iframes = Array.from(containerRef.current.querySelectorAll('iframe'));
+                            for (const f of iframes) {
+                                try {
+                                    if (f.contentWindow === win) {
+                                        iframe = f;
+                                        break;
+                                    }
+                                } catch (e) {
+                                    // Ignore access errors on other iframes
+                                }
+                            }
+                            // Last resort: if only 1 iframe exists, use it
+                            if (!iframe && iframes.length === 1) {
+                                iframe = iframes[0];
+                            }
+                        }
+                        
+                        if (!iframe) return;
+                        
+                        const iframeRect = iframe.getBoundingClientRect();
+
+                        setSelectedText(text);
+                        setSelectionPosition({
+                            x: iframeRect.left + rect.left + rect.width / 2,
+                            y: iframeRect.top + rect.top,
+                        });
+                    } catch (e) { 
+                        console.error("Manual epub selection error:", e); 
+                    }
+                }, 100); // Fast 100ms debounce captures fleeting mobile selections
             };
 
-            // 2. Bypass epub.js debouncing entirely to catch fleeting mobile selections
-            doc.addEventListener('mouseup', handleSelection, false);
-            doc.addEventListener('touchend', handleSelection, false);
+            // 2. Bind listeners directly to iframe document
             doc.addEventListener('selectionchange', handleSelection, false);
+            doc.addEventListener('touchend', handleSelection, false);
+            doc.addEventListener('mouseup', handleSelection, false);
         });
 
         // 3. Bulletproof fallback: use epub.js native 'selected' event
@@ -195,7 +225,19 @@ export default function EpubViewer() {
                     if (!text) return;
                     
                     const rect = range.getBoundingClientRect();
-                    const iframe = (contents.window.frameElement as HTMLIFrameElement) || containerRef.current?.querySelector('iframe');
+                    const win = contents.window;
+                    
+                    let iframe: HTMLIFrameElement | null = null;
+                    try { iframe = win.frameElement as HTMLIFrameElement; } catch (e) {}
+                    
+                    if (!iframe && containerRef.current) {
+                        const iframes = Array.from(containerRef.current.querySelectorAll('iframe'));
+                        for (const f of iframes) {
+                            try { if (f.contentWindow === win) { iframe = f; break; } } catch (e) {}
+                        }
+                        if (!iframe && iframes.length === 1) iframe = iframes[0];
+                    }
+                    
                     const iframeRect = iframe ? iframe.getBoundingClientRect() : { left: 0, top: 0 };
                     
                     setSelectedText(text);
@@ -203,8 +245,6 @@ export default function EpubViewer() {
                         x: iframeRect.left + rect.left + rect.width / 2,
                         y: iframeRect.top + rect.top,
                     });
-                    
-                    // Do NOT remove ranges, it causes mobile to lose the visual highlight
                 }).catch(() => {});
             } catch (e) {
                 console.error("Native epub selection error:", e);

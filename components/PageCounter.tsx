@@ -1,7 +1,7 @@
 'use client';
 
 import { useStore } from '@/store/useStore';
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import translations from '@/lib/translations';
 
 interface PageCounterProps {
@@ -11,39 +11,71 @@ interface PageCounterProps {
 }
 
 export default function PageCounter({ current, total, type = 'page' }: PageCounterProps) {
-    const { uiLanguage } = useStore();
+    const { uiLanguage, setCurrentPage } = useStore();
     const t = useMemo(() => translations[uiLanguage], [uiLanguage]);
+    
+    // Sync slider with current page, unless user is actively dragging it
+    const [sliderValue, setSliderValue] = useState(current);
+    const [isDragging, setIsDragging] = useState(false);
 
-    if (total === 0) return null;
+    useEffect(() => {
+        if (!isDragging) {
+            setSliderValue(current);
+        }
+    }, [current, isDragging]);
 
-    const getDisplayText = () => {
+    if (total <= 1) return null;
+
+    const getDisplayText = (val: number) => {
         switch (type) {
             case 'percent':
-                return `${Math.round(current)}%`;
+                return `${Math.round(val)}%`;
             case 'chapter':
                 return t.chapterOf
-                    .replace('{current}', String(current))
+                    .replace('{current}', String(val))
                     .replace('{total}', String(total));
             case 'page':
             default:
                 return t.pageOf
-                    .replace('{current}', String(current))
+                    .replace('{current}', String(val))
                     .replace('{total}', String(total));
         }
     };
 
     return (
         <div
-            className="fixed bottom-20 right-6 z-40 px-4 py-2 rounded-lg shadow-lg"
+            className="fixed bottom-20 right-6 z-40 px-4 py-3 rounded-2xl shadow-2xl flex flex-col items-center gap-2"
             style={{
-                background: 'rgba(10, 10, 25, 0.8)',
-                backdropFilter: 'blur(12px)',
-                border: '1px solid rgba(255,255,255,0.06)',
+                background: 'rgba(15, 15, 30, 0.85)',
+                backdropFilter: 'blur(16px)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                minWidth: '200px',
             }}
         >
-            <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
-                {getDisplayText()}
+            <span className="text-sm font-bold text-white tracking-wide">
+                {getDisplayText(sliderValue)}
             </span>
+            <input
+                type="range"
+                min={1}
+                max={total}
+                value={sliderValue}
+                onChange={(e) => setSliderValue(parseInt(e.target.value, 10))}
+                onMouseDown={() => setIsDragging(true)}
+                onTouchStart={() => setIsDragging(true)}
+                onMouseUp={() => {
+                    setIsDragging(false);
+                    setCurrentPage(sliderValue);
+                }}
+                onTouchEnd={() => {
+                    setIsDragging(false);
+                    setCurrentPage(sliderValue);
+                }}
+                className="w-full accent-indigo-500 h-1.5 bg-white/20 rounded-lg appearance-none cursor-pointer"
+                style={{
+                    boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.5)',
+                }}
+            />
         </div>
     );
 }
