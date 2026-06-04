@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 import { saveApiKey, deleteAccount } from '@/app/actions/profile';
 import { createClient } from '@/utils/supabase/client';
 import { Shield, Key, AlertTriangle, LogOut, ArrowLeft } from 'lucide-react';
@@ -49,8 +50,13 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--bg-default)] p-8 text-slate-200">
-      <div className="max-w-3xl mx-auto space-y-8">
+    <div className="min-h-screen p-6 md:p-8 text-slate-200" style={{ background: 'var(--bg-base)' }}>
+      <motion.div
+        className="max-w-3xl mx-auto space-y-6"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+      >
         
         <button onClick={() => router.push('/')} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
           <ArrowLeft className="w-5 h-5" /> Volver al Lector
@@ -156,7 +162,7 @@ export default function ProfilePage() {
             <LogOut className="w-5 h-5" /> Cerrar Sesión
           </button>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

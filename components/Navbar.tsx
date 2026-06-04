@@ -5,9 +5,10 @@ import { UserCircle, Cloud, LogOut, Settings } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Navbar() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<{ email?: string } | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const supabase = createClient();
   const router = useRouter();
@@ -17,13 +18,10 @@ export default function Navbar() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
     });
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
-      // Force cache invalidation on auth state change
       router.refresh();
     });
-
     return () => subscription.unsubscribe();
   }, [supabase.auth, router]);
 
@@ -44,58 +42,95 @@ export default function Navbar() {
   };
 
   return (
-    <div className="fixed top-4 right-6 z-[100]" ref={menuRef}>
-      <button
+    <div className="fixed top-4 right-5 z-[100]" ref={menuRef}>
+      <motion.button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-center w-12 h-12 rounded-full bg-[#1a1a2e]/80 hover:bg-[#1a1a2e] border border-white/10 text-white/70 hover:text-white transition-all backdrop-blur-md shadow-lg"
+        whileHover={{ scale: 1.06 }}
+        whileTap={{ scale: 0.94 }}
+        className="flex items-center justify-center w-11 h-11 rounded-full text-white/60 hover:text-white transition-colors cursor-pointer"
+        style={{
+          background: 'rgba(20,20,40,0.85)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255,255,255,0.1)',
+          boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
+        }}
+        aria-label="User menu"
+        aria-expanded={isOpen}
       >
-        <UserCircle className="w-6 h-6" />
-      </button>
+        <UserCircle className="w-5 h-5" />
+      </motion.button>
 
-      {isOpen && (
-        <div className="absolute top-14 right-0 w-48 py-2 rounded-xl bg-[#0c0c16]/90 backdrop-blur-xl border border-white/10 shadow-2xl origin-top-right animate-in fade-in zoom-in-95 duration-200">
-          {user ? (
-            <>
-              <div className="px-4 py-2 border-b border-white/10 mb-1">
-                <p className="text-xs font-semibold text-white/50 uppercase tracking-wider">Cuenta</p>
-                <p className="text-sm text-white/90 truncate">{user.email}</p>
-              </div>
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.92, y: -8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.92, y: -8 }}
+            transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+            className="absolute top-14 right-0 w-52 py-1.5 rounded-2xl overflow-hidden"
+            style={{
+              background: 'rgba(10,10,22,0.96)',
+              backdropFilter: 'blur(32px)',
+              border: '1px solid rgba(255,255,255,0.09)',
+              boxShadow: '0 20px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(99,102,241,0.08)',
+              transformOrigin: 'top right',
+            }}
+          >
+            {user ? (
+              <>
+                <div className="px-4 py-2.5 border-b border-white/[0.07] mb-0.5">
+                  <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-0.5">Cuenta</p>
+                  <p className="text-sm text-white/80 truncate font-medium">{user.email}</p>
+                </div>
+
+                {([
+                  { href: '/cloud', icon: Cloud, label: 'Mi Nube' },
+                  { href: '/profile', icon: Settings, label: 'Ajustes' },
+                ] as const).map(({ href, icon: Icon, label }, i) => (
+                  <motion.div
+                    key={href}
+                    initial={{ opacity: 0, x: -6 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.04, duration: 0.15 }}
+                  >
+                    <Link
+                      href={href}
+                      onClick={() => setIsOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-white/60 hover:text-white hover:bg-white/[0.06] transition-all"
+                    >
+                      <Icon className="w-4 h-4" />
+                      {label}
+                    </Link>
+                  </motion.div>
+                ))}
+
+                <div className="border-t border-white/[0.05] mt-0.5">
+                  <motion.button
+                    initial={{ opacity: 0, x: -6 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.08, duration: 0.15 }}
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400/80 hover:text-red-400 hover:bg-red-500/[0.07] transition-all cursor-pointer"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Cerrar Sesión
+                  </motion.button>
+                </div>
+              </>
+            ) : (
               <Link
-                href="/cloud"
+                href="/login"
                 onClick={() => setIsOpen(false)}
-                className="flex items-center gap-3 px-4 py-2 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors"
+                className="flex items-center gap-3 px-4 py-2.5 text-sm text-white/60 hover:text-white hover:bg-white/[0.06] transition-all"
               >
-                <Cloud className="w-4 h-4" />
-                Mi Nube
+                <UserCircle className="w-4 h-4" />
+                Iniciar Sesión
               </Link>
-              <Link
-                href="/profile"
-                onClick={() => setIsOpen(false)}
-                className="flex items-center gap-3 px-4 py-2 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors"
-              >
-                <Settings className="w-4 h-4" />
-                Ajustes
-              </Link>
-              <button
-                onClick={handleLogout}
-                className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-400/10 transition-colors mt-1 border-t border-white/5"
-              >
-                <LogOut className="w-4 h-4" />
-                Cerrar Sesión
-              </button>
-            </>
-          ) : (
-            <Link
-              href="/login"
-              onClick={() => setIsOpen(false)}
-              className="flex items-center gap-3 px-4 py-2 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors"
-            >
-              <UserCircle className="w-4 h-4" />
-              Iniciar Sesión
-            </Link>
-          )}
-        </div>
-      )}
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

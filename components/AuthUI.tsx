@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { Mail, Lock, User, Key, ArrowRight, ShieldCheck, Loader2, Chrome } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function AuthUI() {
   const [email, setEmail] = useState('');
@@ -73,7 +74,18 @@ export default function AuthUI() {
   };
 
   return (
-    <div className="w-full max-w-md mx-auto p-8 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl shadow-purple-900/20 text-slate-200">
+    <motion.div
+      initial={{ opacity: 0, y: 24, scale: 0.97 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.38, ease: [0.16, 1, 0.3, 1] }}
+      className="w-full p-8 rounded-3xl text-slate-200"
+      style={{
+        background: 'rgba(15,15,28,0.85)',
+        backdropFilter: 'blur(40px)',
+        border: '1px solid rgba(255,255,255,0.09)',
+        boxShadow: '0 24px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(99,102,241,0.1)',
+      }}
+    >
       <div className="text-center mb-8">
         <ShieldCheck className="w-12 h-12 text-purple-400 mx-auto mb-4" />
         <h2 className="text-2xl font-bold text-white tracking-tight">
@@ -200,6 +212,6 @@ export default function AuthUI() {
           Continuar como Invitado <ArrowRight className="w-4 h-4" />
         </button>
       </div>
-    </div>
+    </motion.div>
   );
 }

@@ -2,72 +2,95 @@
 
 import { useState, useEffect } from 'react';
 import Cookies from 'js-cookie';
-import { ShieldAlert } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function GDPRBanner() {
   const [showBanner, setShowBanner] = useState(false);
 
   useEffect(() => {
-    // Check if user has already made a choice
-    const consent = Cookies.get('gdpr_consent');
-    if (!consent) {
-      setShowBanner(true);
-    }
+    if (!Cookies.get('gdpr_consent')) setShowBanner(true);
   }, []);
 
-  const handleAccept = () => {
-    Cookies.set('gdpr_consent', 'accepted', { expires: 180 }); // 6 months per Italian law
+  const accept = (value: string) => {
+    Cookies.set('gdpr_consent', value, { expires: 180 });
     setShowBanner(false);
   };
 
-  const handleReject = () => {
-    Cookies.set('gdpr_consent', 'rejected', { expires: 180 });
-    setShowBanner(false);
-  };
-
-  if (!showBanner) return null;
+  const btnBase = 'px-5 py-2 text-sm font-medium rounded-xl transition-all duration-150 whitespace-nowrap cursor-pointer';
 
   return (
-    <div className="fixed bottom-0 left-0 w-full z-[99999] p-4 animate-in slide-in-from-bottom-4 duration-500">
-      <div className="max-w-5xl mx-auto bg-slate-900/95 backdrop-blur-xl border border-slate-700 p-6 rounded-2xl shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6">
-        
-        <div className="flex items-start gap-4">
-          <div className="p-3 bg-purple-500/20 rounded-full text-purple-400 shrink-0 mt-1">
-            <ShieldAlert className="w-6 h-6" />
-          </div>
-          <div>
-            <h3 className="text-white font-bold text-lg mb-1">Tu Privacidad es Nuestra Prioridad</h3>
-            <p className="text-slate-300 text-sm leading-relaxed">
-              Utilizamos cookies propias estrictamente necesarias para el funcionamiento del inicio de sesión (Auth) y preferencias del lector. De acuerdo con la normativa del <strong>Garante per la protezione dei dati personali</strong>, puedes elegir si deseas aceptar cookies de análisis opcionales. Puedes cambiar de opinión en cualquier momento.
-            </p>
-          </div>
-        </div>
+    <AnimatePresence>
+      {showBanner && (
+        <motion.div
+          className="fixed bottom-0 left-0 w-full z-[99999] p-4"
+          initial={{ y: 120, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: 120, opacity: 0 }}
+          transition={{ type: 'spring', damping: 26, stiffness: 300, mass: 0.8 }}
+        >
+          <div
+            className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-5 p-5 rounded-2xl"
+            style={{
+              background: 'rgba(10,10,22,0.97)',
+              backdropFilter: 'blur(32px)',
+              border: '1px solid rgba(255,255,255,0.09)',
+              boxShadow: '0 -4px 48px rgba(0,0,0,0.6)',
+            }}
+          >
+            <div className="flex items-start gap-4">
+              <div
+                className="p-2.5 rounded-xl shrink-0 mt-0.5"
+                style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.2)' }}
+              >
+                <ShieldCheck className="w-5 h-5" style={{ color: 'var(--accent-hover)' }} />
+              </div>
+              <div>
+                <h3 className="font-semibold text-sm mb-0.5" style={{ color: 'var(--text-primary)' }}>
+                  Tu Privacidad es Nuestra Prioridad
+                </h3>
+                <p className="text-xs leading-relaxed max-w-xl" style={{ color: 'var(--text-muted)' }}>
+                  Usamos cookies necesarias para auth y preferencias de lectura. Conforme al{' '}
+                  <strong style={{ color: 'var(--text-secondary)' }}>Garante per la protezione dei dati personali</strong>.
+                  Puedes cambiar tu elección en cualquier momento.
+                </p>
+              </div>
+            </div>
 
-          <div className="flex flex-col sm:flex-row w-full md:w-auto gap-2 shrink-0">
-            <button
-              onClick={handleReject}
-              className="px-4 py-2 text-sm rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-800 hover:text-white transition-all whitespace-nowrap"
-            >
-              Rechazar
-            </button>
-            <button
-              onClick={() => {
-                Cookies.set('gdpr_consent', 'essentials_only', { expires: 180 });
-                setShowBanner(false);
-              }}
-              className="px-4 py-2 text-sm rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-800 hover:text-white transition-all whitespace-nowrap"
-            >
-              Solo Esenciales
-            </button>
-            <button
-              onClick={handleAccept}
-              className="px-4 py-2 text-sm rounded-lg bg-purple-600 text-white hover:bg-purple-500 font-bold transition-all shadow-lg shadow-purple-900/50 whitespace-nowrap"
-            >
-              Aceptar Todo
-            </button>
+            <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto shrink-0">
+              <motion.button
+                whileTap={{ scale: 0.96 }}
+                onClick={() => accept('rejected')}
+                className={btnBase}
+                style={{ border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-muted)' }}
+              >
+                Rechazar
+              </motion.button>
+              <motion.button
+                whileTap={{ scale: 0.96 }}
+                onClick={() => accept('essentials_only')}
+                className={btnBase}
+                style={{ border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-secondary)' }}
+              >
+                Solo Esenciales
+              </motion.button>
+              <motion.button
+                whileTap={{ scale: 0.96 }}
+                onClick={() => accept('accepted')}
+                className={btnBase}
+                style={{
+                  background: 'var(--accent)',
+                  color: '#fff',
+                  fontWeight: 700,
+                  boxShadow: '0 0 20px rgba(99,102,241,0.3)',
+                }}
+              >
+                Aceptar Todo
+              </motion.button>
+            </div>
           </div>
-
-      </div>
-    </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

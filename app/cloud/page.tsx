@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@/utils/supabase/client';
 import { listCloudFiles, deleteCloudFile } from '@/app/actions/cloud';
 import { Cloud, Upload, Trash2, BookOpen, AlertCircle, Loader2, ArrowLeft } from 'lucide-react';
@@ -119,8 +120,13 @@ export default function CloudLibraryPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--bg-default)] p-8 text-slate-200">
-      <div className="max-w-4xl mx-auto space-y-8 mt-16">
+    <div className="min-h-screen p-6 md:p-8 text-slate-200" style={{ background: 'var(--bg-base)' }}>
+      <motion.div
+        className="max-w-4xl mx-auto space-y-6 mt-16"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+      >
         
         <button onClick={() => router.push('/')} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
           <ArrowLeft className="w-5 h-5" /> Volver al Lector
@@ -225,7 +231,7 @@ export default function CloudLibraryPage() {
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
