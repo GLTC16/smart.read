@@ -7,9 +7,8 @@ import BookViewer from "@/components/BookViewer";
 import BottomBar from "@/components/BottomBar";
 import TranslationTooltip from "@/components/TranslationTooltip";
 import translations, { detectBrowserLanguage } from "@/lib/translations";
-import { Upload, BookOpen, Zap, Globe, Shield, UserCircle } from "lucide-react";
+import { Upload, BookOpen, Zap, Globe, Shield } from "lucide-react";
 import { useState, useCallback, useEffect, useMemo } from "react";
-import Link from "next/link";
 
 export default function Home() {
   const { currentFile, setFile, uiLanguage, setUiLanguage, setTargetLanguage } = useStore();
@@ -114,17 +113,6 @@ export default function Home() {
             className="flex-1 flex flex-col items-center justify-center relative overflow-y-auto overflow-x-hidden pt-16 pb-8"
             style={{ background: "var(--gradient-hero)" }}
           >
-            {/* Top Auth Button */}
-            <div className="absolute top-4 right-6 z-50">
-              <Link
-                href="/profile"
-                className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-white text-sm font-medium transition-all backdrop-blur-md shadow-lg"
-              >
-                <UserCircle className="w-5 h-5" />
-                <span>Perfil / Login</span>
-              </Link>
-            </div>
-
             {/* Ambient orbs */}
             <div
               aria-hidden="true"

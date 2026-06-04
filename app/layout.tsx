@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Lora } from "next/font/google";
 import Script from "next/script";
 import GDPRBanner from "@/components/GDPRBanner";
+import Navbar from "@/components/Navbar";
 import "./globals.css";
 
 const inter = Inter({
@@ -51,6 +52,7 @@ export default function RootLayout({
   return (
     <html lang="es" className={`${inter.variable} ${lora.variable}`}>
       <body className={`${inter.className} antialiased`}>
+        <Navbar />
         {children}
         <Script
           async
