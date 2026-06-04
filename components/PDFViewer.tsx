@@ -2,14 +2,14 @@
 
 import { Document, Page, pdfjs } from 'react-pdf';
 import { useStore } from '@/store/useStore';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import PageCounter from './PageCounter';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
-// Configure Worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+// Configure Worker — served locally to avoid CDN/CORS issues
+pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 
 function PDFSkeleton() {
     return (
@@ -120,15 +120,18 @@ export default function PDFViewer() {
         };
     }, [setSelectedText, setSelectionPosition, resetSelection]);
 
-    const fileUrl = (() => {
+    // MUST be memoized — URL.createObjectURL returns new URL each call,
+    // causing react-pdf to see a new file prop every render → infinite reload loop
+    const fileUrl = useMemo(() => {
         if (!currentFile) return null;
         if (currentFile instanceof File) return URL.createObjectURL(currentFile);
         return currentFile as string;
-    })();
+    }, [currentFile]);
 
     function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
-        setTotalPages(numPages);
+        // setIsLoading first to avoid Zustand useSyncExternalStore race
         setIsLoading(false);
+        setTotalPages(numPages);
     }
 
     if (!fileUrl) return null;
@@ -139,29 +142,26 @@ export default function PDFViewer() {
             className="flex justify-center min-h-screen pt-8 pb-32 overflow-auto relative"
             style={{ background: 'var(--bg-surface)' }}
         >
-            {isLoading && <PDFSkeleton />}
-            <div
-                style={{
-                    display: isLoading ? 'none' : 'block',
-                    transition: 'opacity 0.3s ease',
-                    animation: isLoading ? 'none' : 'scaleIn 0.3s ease forwards',
-                }}
+            {/* Skeleton overlaid on top while loading — Document always rendered */}
+            {isLoading && (
+                <div className="absolute inset-0 z-10" style={{ background: 'var(--bg-surface)' }}>
+                    <PDFSkeleton />
+                </div>
+            )}
+            <Document
+                file={fileUrl}
+                onLoadSuccess={onDocumentLoadSuccess}
+                className="shadow-2xl"
+                loading={null}
             >
-                <Document
-                    file={fileUrl}
-                    onLoadSuccess={onDocumentLoadSuccess}
-                    className="shadow-2xl"
-                    loading={<PDFSkeleton />}
-                >
-                    <Page
-                        pageNumber={currentPage}
-                        width={pageWidth}
-                        renderTextLayer={true}
-                        renderAnnotationLayer={true}
-                        className="rounded-lg overflow-hidden"
-                    />
-                </Document>
-            </div>
+                <Page
+                    pageNumber={currentPage}
+                    width={pageWidth}
+                    renderTextLayer={true}
+                    renderAnnotationLayer={true}
+                    className="rounded-lg overflow-hidden"
+                />
+            </Document>
             <PageCounter current={currentPage} total={totalPages} type="page" />
         </div>
     );

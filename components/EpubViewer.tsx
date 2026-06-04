@@ -142,8 +142,8 @@ export default function EpubViewer() {
 
     return (
         <div
-            className="relative w-full"
-            style={{ height: '80vh', background: 'var(--bg-surface)' }}
+            className="relative w-full h-full"
+            style={{ minHeight: '500px', background: 'var(--bg-surface)' }}
         >
             {!isReaderReady && (
                 <div
