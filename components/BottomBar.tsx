@@ -2,7 +2,8 @@
 
 import { useStore } from '@/store/useStore';
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, List, X } from 'lucide-react';
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useMemo } from 'react';
+import translations from '@/lib/translations';
 
 interface BottomBarProps {
     toggleSidebar: () => void;
@@ -14,8 +15,10 @@ export default function BottomBar({ toggleSidebar }: BottomBarProps) {
         fileType, currentFile,
         epubRendition,
         zoomLevel, setZoomLevel,
-        clearFile,
+        clearFile, uiLanguage,
     } = useStore();
+
+    const t = useMemo(() => translations[uiLanguage], [uiLanguage]);
 
     // Navigation
     const handlePrevPage = useCallback(() => {
@@ -78,7 +81,7 @@ export default function BottomBar({ toggleSidebar }: BottomBarProps) {
                     onClick={toggleSidebar}
                     className="p-2.5 rounded-xl transition-all duration-150 active:scale-95"
                     style={{ color: 'var(--text-muted)' }}
-                    title="Table of Contents"
+                    title={t.tableOfContents}
                     onMouseEnter={e => {
                         (e.currentTarget as HTMLElement).style.background = 'rgba(99,102,241,0.15)';
                         (e.currentTarget as HTMLElement).style.color = 'var(--accent-hover)';
@@ -101,7 +104,7 @@ export default function BottomBar({ toggleSidebar }: BottomBarProps) {
                         style={{ color: 'var(--text-muted)' }}
                         onClick={handlePrevPage}
                         disabled={currentPage === 1 && fileType === 'pdf'}
-                        title="Previous Page"
+                        title={t.previousPage}
                         onMouseEnter={e => {
                             if (!(e.currentTarget as HTMLButtonElement).disabled) {
                                 (e.currentTarget as HTMLElement).style.background = 'rgba(99,102,241,0.15)';
@@ -124,7 +127,7 @@ export default function BottomBar({ toggleSidebar }: BottomBarProps) {
                             className="text-[10px] font-bold uppercase tracking-widest mb-0.5"
                             style={{ color: 'var(--text-disabled)' }}
                         >
-                            {fileType === 'pdf' ? 'PÁGINA' : 'LEYENDO'}
+                            {fileType === 'pdf' ? t.page : t.reading}
                         </span>
                         <span
                             className="text-lg font-bold leading-none font-reading"
@@ -138,7 +141,7 @@ export default function BottomBar({ toggleSidebar }: BottomBarProps) {
                         className="p-2.5 rounded-xl transition-all duration-150 active:scale-95"
                         style={{ color: 'var(--text-muted)' }}
                         onClick={handleNextPage}
-                        title="Next Page"
+                        title={t.nextPage}
                         onMouseEnter={e => {
                             (e.currentTarget as HTMLElement).style.background = 'rgba(99,102,241,0.15)';
                             (e.currentTarget as HTMLElement).style.color = 'var(--accent-hover)';
@@ -162,7 +165,7 @@ export default function BottomBar({ toggleSidebar }: BottomBarProps) {
                         disabled={zoomLevel <= 50}
                         className="p-2.5 rounded-xl transition-all duration-150 active:scale-95 disabled:opacity-30"
                         style={{ color: 'var(--text-muted)' }}
-                        title="Zoom Out"
+                        title={t.zoomOut}
                         onMouseEnter={e => {
                             if (!(e.currentTarget as HTMLButtonElement).disabled) {
                                 (e.currentTarget as HTMLElement).style.background = 'rgba(20,184,166,0.15)';
@@ -189,7 +192,7 @@ export default function BottomBar({ toggleSidebar }: BottomBarProps) {
                         disabled={zoomLevel >= 200}
                         className="p-2.5 rounded-xl transition-all duration-150 active:scale-95 disabled:opacity-30"
                         style={{ color: 'var(--text-muted)' }}
-                        title="Zoom In"
+                        title={t.zoomIn}
                         onMouseEnter={e => {
                             if (!(e.currentTarget as HTMLButtonElement).disabled) {
                                 (e.currentTarget as HTMLElement).style.background = 'rgba(20,184,166,0.15)';
@@ -213,7 +216,7 @@ export default function BottomBar({ toggleSidebar }: BottomBarProps) {
                     onClick={clearFile}
                     className="p-2.5 rounded-xl transition-all duration-150 active:scale-95"
                     style={{ color: 'var(--text-muted)' }}
-                    title="Cerrar libro"
+                    title={t.closeBook}
                     onMouseEnter={e => {
                         (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.15)';
                         (e.currentTarget as HTMLElement).style.color = '#f87171';

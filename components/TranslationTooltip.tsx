@@ -2,9 +2,9 @@
 
 import { useStore } from '@/store/useStore';
 import { translateText } from '@/services/translationService';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { X, Copy, Globe, Loader2, Check } from 'lucide-react';
-import { useState } from 'react';
+import translations from '@/lib/translations';
 
 const LANGUAGES: { code: import('@/store/useStore').Language; label: string; flag: string }[] = [
     { code: 'en', label: 'EN', flag: '🇬🇧' },
@@ -17,6 +17,9 @@ const LANGUAGES: { code: import('@/store/useStore').Language; label: string; fla
     { code: 'zh', label: 'ZH', flag: '🇨🇳' },
 ];
 
+const TOOLTIP_WIDTH = 320;
+const TOOLTIP_MARGIN = 12;
+
 export default function TranslationTooltip() {
     const {
         selectedText,
@@ -28,29 +31,40 @@ export default function TranslationTooltip() {
         setIsTranslationLoading,
         setTargetLanguage,
         resetSelection,
+        uiLanguage,
     } = useStore();
 
     const tooltipRef = useRef<HTMLDivElement>(null);
     const [copied, setCopied] = useState(false);
 
+    const t = useMemo(() => translations[uiLanguage], [uiLanguage]);
+
     // Fetch translation when text or language changes
     useEffect(() => {
+        if (!selectedText) return;
+
+        let cancelled = false;
         const fetchTranslation = async () => {
-            if (!selectedText) return;
             setIsTranslationLoading(true);
             setTranslationResult(null);
             try {
                 const translatedText = await translateText(selectedText, targetLanguage);
-                setTranslationResult(translatedText);
-            } catch (error) {
-                console.error('Translation failed', error);
-                setTranslationResult('Error al traducir el texto.');
+                if (!cancelled) {
+                    setTranslationResult(translatedText || t.translationUnavailable);
+                }
+            } catch {
+                if (!cancelled) {
+                    setTranslationResult(t.translationError);
+                }
             } finally {
-                setIsTranslationLoading(false);
+                if (!cancelled) {
+                    setIsTranslationLoading(false);
+                }
             }
         };
         fetchTranslation();
-    }, [selectedText, targetLanguage, setIsTranslationLoading, setTranslationResult]);
+        return () => { cancelled = true; };
+    }, [selectedText, targetLanguage, setIsTranslationLoading, setTranslationResult, t]);
 
     // Close on click outside
     useEffect(() => {
@@ -72,16 +86,35 @@ export default function TranslationTooltip() {
 
     if (!selectedText || !selectionPosition) return null;
 
+    // Smart positioning: clamp horizontally and flip vertically if needed
+    const viewportW = typeof window !== 'undefined' ? window.innerWidth : 800;
+    const viewportH = typeof window !== 'undefined' ? window.innerHeight : 600;
+
+    const halfTooltip = TOOLTIP_WIDTH / 2;
+    const clampedX = Math.max(
+        halfTooltip + TOOLTIP_MARGIN,
+        Math.min(selectionPosition.x, viewportW - halfTooltip - TOOLTIP_MARGIN)
+    );
+
+    // If selection is in the bottom third of the screen, place tooltip above
+    const showAbove = selectionPosition.y > viewportH * 0.65;
+    const topPosition = showAbove
+        ? selectionPosition.y - 16  // above selection
+        : selectionPosition.y + 16; // below selection
+
     const activeLang = LANGUAGES.find(l => l.code === targetLanguage);
 
     return (
         <div
             ref={tooltipRef}
-            className="fixed z-[9999] w-80 flex flex-col overflow-hidden"
+            className="fixed z-[9999] flex flex-col overflow-hidden"
             style={{
-                left: selectionPosition.x,
-                top: selectionPosition.y + 16,
-                transform: 'translateX(-50%)',
+                width: `${TOOLTIP_WIDTH}px`,
+                left: clampedX,
+                top: topPosition,
+                transform: showAbove
+                    ? 'translateX(-50%) translateY(-100%)'
+                    : 'translateX(-50%)',
                 animation: 'tooltipIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
                 background: 'rgba(12, 12, 28, 0.92)',
                 backdropFilter: 'blur(32px) saturate(200%)',
@@ -132,25 +165,26 @@ export default function TranslationTooltip() {
             <div className="p-4 flex flex-col gap-3">
                 {/* Original text */}
                 <div
-                    className="text-sm italic line-clamp-2 pl-3"
+                    className="text-sm italic pl-3 overflow-y-auto"
                     style={{
                         color: 'var(--text-muted)',
                         borderLeft: '2px solid rgba(99,102,241,0.4)',
+                        maxHeight: '80px',
                     }}
                 >
                     &ldquo;{selectedText}&rdquo;
                 </div>
 
                 {/* Translation result */}
-                <div className="min-h-10">
+                <div className="min-h-10 overflow-y-auto" style={{ maxHeight: '160px' }}>
                     {isTranslationLoading ? (
                         <div className="flex items-center gap-2" style={{ color: 'var(--text-muted)' }}>
                             <Loader2 size={16} className="animate-spin" style={{ color: 'var(--accent)' }} />
-                            <span className="text-sm">Traduciendo…</span>
+                            <span className="text-sm">{t.translating}</span>
                         </div>
                     ) : (
                         <div
-                            className="text-lg font-semibold leading-snug font-reading"
+                            className="text-base font-semibold leading-snug font-reading"
                             style={{ color: 'var(--text-primary)' }}
                         >
                             {translationResult}
@@ -198,7 +232,7 @@ export default function TranslationTooltip() {
                                 background: copied ? 'rgba(20,184,166,0.15)' : 'transparent',
                                 border: copied ? '1px solid rgba(20,184,166,0.3)' : '1px solid transparent',
                             }}
-                            title="Copiar traducción"
+                            title={t.copyTranslation}
                         >
                             {copied ? <Check size={14} /> : <Copy size={14} />}
                         </button>

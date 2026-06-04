@@ -19,7 +19,7 @@ const rwClient = client.readWrite;
 const portfolioSites = [
   {
     name: "SmartRead",
-    url: "https://smart-read.vercel.app", // Actualizar con la URL final de Vercel
+    url: "https://smart-read-rouge.vercel.app", // Actualizar con la URL final de Vercel
     tweets: [
       "¿Cansado de que los PDFs te quemen los ojos a las 3 AM? Construí SmartRead, un lector con Modo Oscuro real y traductor integrado. Pruébalo gratis aquí: {url} 📚🌙 #Estudio #Universidad",
       "Tips de estudio: Deja de perder tiempo abriendo Google Translate. Con SmartRead, seleccionas el texto en el PDF y se traduce mágicamente. 100% gratis. Pruébalo: {url} 🚀",

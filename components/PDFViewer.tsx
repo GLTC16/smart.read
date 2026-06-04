@@ -5,13 +5,14 @@ import { useStore } from '@/store/useStore';
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import PageCounter from './PageCounter';
+import translations from '@/lib/translations';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
 // Configure Worker — served locally to avoid CDN/CORS issues
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 
-function PDFSkeleton() {
+function PDFSkeleton({ loadingText }: { loadingText: string }) {
     return (
         <div
             className="flex flex-col items-center gap-4 w-full pt-10"
@@ -58,7 +59,7 @@ function PDFSkeleton() {
                 className="text-sm"
                 style={{ color: 'var(--text-muted)', animation: 'pulse-glow 2s ease infinite' }}
             >
-                Cargando documento…
+                {loadingText}
             </p>
         </div>
     );
@@ -69,7 +70,7 @@ export default function PDFViewer() {
         currentFile, currentPage, totalPages,
         setCurrentPage, setTotalPages, setSelectedText,
         setSelectionPosition, resetSelection,
-        zoomLevel,
+        zoomLevel, uiLanguage,
     } = useStore();
     const containerRef = useRef<HTMLDivElement>(null);
     const touchStartX = useRef<number | null>(null);
@@ -79,6 +80,7 @@ export default function PDFViewer() {
     const [isLoading, setIsLoading] = useState(true);
     const [loadError, setLoadError] = useState<string | null>(null);
 
+    const t = useMemo(() => translations[uiLanguage], [uiLanguage]);
     const pageWidth = baseWidth * (zoomLevel / 100);
 
     // Calculate responsive base width
@@ -92,34 +94,32 @@ export default function PDFViewer() {
         return () => window.removeEventListener('resize', calculateWidth);
     }, [isMobile]);
 
-    // Handle text selection
+    // Handle text selection — only on mouseup/touchend to avoid spamming translations
     useEffect(() => {
-        const handleSelection = () => {
-            const selection = window.getSelection();
-            if (!selection || selection.rangeCount === 0) return;
-            const text = selection.toString().trim();
-            if (containerRef.current && !containerRef.current.contains(selection.anchorNode)) return;
-            if (text) {
-                const range = selection.getRangeAt(0);
-                const rect = range.getBoundingClientRect();
-                setSelectionPosition({ x: rect.left + rect.width / 2, y: rect.top });
-                setSelectedText(text);
-            }
+        const handleSelectionEnd = () => {
+            // Small delay to let the selection finalize
+            setTimeout(() => {
+                const selection = window.getSelection();
+                if (!selection || selection.rangeCount === 0) return;
+                if (containerRef.current && !containerRef.current.contains(selection.anchorNode)) return;
+                const text = selection.toString().trim();
+                if (text) {
+                    const range = selection.getRangeAt(0);
+                    const rect = range.getBoundingClientRect();
+                    setSelectionPosition({ x: rect.left + rect.width / 2, y: rect.top });
+                    setSelectedText(text);
+                } else {
+                    resetSelection();
+                }
+            }, 50);
         };
 
-        const handleClearSelection = () => {
-            const selection = window.getSelection();
-            if (selection?.isCollapsed) resetSelection();
-        };
-
-        document.addEventListener('selectionchange', handleSelection);
-        document.addEventListener('mouseup', handleClearSelection);
-        document.addEventListener('touchend', handleClearSelection);
+        document.addEventListener('mouseup', handleSelectionEnd);
+        document.addEventListener('touchend', handleSelectionEnd);
 
         return () => {
-            document.removeEventListener('selectionchange', handleSelection);
-            document.removeEventListener('mouseup', handleClearSelection);
-            document.removeEventListener('touchend', handleClearSelection);
+            document.removeEventListener('mouseup', handleSelectionEnd);
+            document.removeEventListener('touchend', handleSelectionEnd);
         };
     }, [setSelectedText, setSelectionPosition, resetSelection]);
 
@@ -146,7 +146,7 @@ export default function PDFViewer() {
     function onDocumentLoadError(error: Error) {
         console.error('PDF load error:', error);
         setIsLoading(false);
-        setLoadError('No se pudo cargar el PDF. Verifica que el archivo no esté dañado.');
+        setLoadError(t.pdfLoadError);
     }
 
     const handleTouchStart = useCallback((e: React.TouchEvent) => {
@@ -170,47 +170,56 @@ export default function PDFViewer() {
     if (!fileUrl) return null;
 
     return (
+        // Outer fills the BookViewer box (absolute inset-0), inner scrolls
         <div
-            ref={containerRef}
-            className="flex justify-center pt-8 pb-32 relative"
-            style={{ background: 'var(--bg-surface)', minHeight: '100%' }}
-            onTouchStart={handleTouchStart}
-            onTouchEnd={handleTouchEnd}
+            className="absolute inset-0 overflow-auto"
+            style={{
+                background: 'var(--bg-surface)',
+                WebkitOverflowScrolling: 'touch',
+                touchAction: 'pan-y pinch-zoom',
+            }}
         >
-            {/* Skeleton overlaid on top while loading — Document always rendered */}
-            {isLoading && (
-                <div className="absolute inset-0 z-10" style={{ background: 'var(--bg-surface)' }}>
-                    <PDFSkeleton />
-                </div>
-            )}
-            {loadError ? (
-                <div className="flex flex-col items-center justify-center gap-4 py-20 px-8 text-center">
-                    <div
-                        className="p-4 rounded-2xl"
-                        style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)' }}
-                    >
-                        <span className="text-3xl">⚠️</span>
+            <div
+                ref={containerRef}
+                className="flex justify-center pt-8 pb-32 relative"
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd}
+            >
+                {/* Skeleton overlaid on top while loading — Document always rendered */}
+                {isLoading && (
+                    <div className="absolute inset-0 z-10" style={{ background: 'var(--bg-surface)' }}>
+                        <PDFSkeleton loadingText={t.loadingDocument} />
                     </div>
-                    <p className="text-sm font-medium" style={{ color: '#f87171' }}>{loadError}</p>
-                </div>
-            ) : (
-                <Document
-                    file={fileUrl}
-                    onLoadSuccess={onDocumentLoadSuccess}
-                    onLoadError={onDocumentLoadError}
-                    className="shadow-2xl"
-                    loading={null}
-                >
-                    <Page
-                        pageNumber={currentPage}
-                        width={pageWidth}
-                        renderTextLayer={true}
-                        renderAnnotationLayer={true}
-                        className="rounded-lg overflow-hidden"
-                    />
-                </Document>
-            )}
-            <PageCounter current={currentPage} total={totalPages} type="page" />
+                )}
+                {loadError ? (
+                    <div className="flex flex-col items-center justify-center gap-4 py-20 px-8 text-center">
+                        <div
+                            className="p-4 rounded-2xl"
+                            style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)' }}
+                        >
+                            <span className="text-3xl">⚠️</span>
+                        </div>
+                        <p className="text-sm font-medium" style={{ color: '#f87171' }}>{loadError}</p>
+                    </div>
+                ) : (
+                    <Document
+                        file={fileUrl}
+                        onLoadSuccess={onDocumentLoadSuccess}
+                        onLoadError={onDocumentLoadError}
+                        className="shadow-2xl"
+                        loading={null}
+                    >
+                        <Page
+                            pageNumber={currentPage}
+                            width={pageWidth}
+                            renderTextLayer={true}
+                            renderAnnotationLayer={true}
+                            className="rounded-lg overflow-hidden"
+                        />
+                    </Document>
+                )}
+                <PageCounter current={currentPage} total={totalPages} type="page" />
+            </div>
         </div>
     );
 }

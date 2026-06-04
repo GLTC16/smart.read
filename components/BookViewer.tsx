@@ -3,6 +3,8 @@
 import { useStore } from "@/store/useStore";
 import dynamic from "next/dynamic";
 import { Loader2 } from "lucide-react";
+import { useMemo } from "react";
+import translations from "@/lib/translations";
 
 // Dynamic imports — SSR disabled for browser-only viewers
 const PDFViewer = dynamic(() => import("./PDFViewer"), {
@@ -25,7 +27,7 @@ const PDFViewer = dynamic(() => import("./PDFViewer"), {
                 />
             </div>
             <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                Cargando visor PDF…
+                Loading…
             </p>
         </div>
     ),
@@ -51,7 +53,7 @@ const EpubViewer = dynamic(() => import("./EpubViewer"), {
                 />
             </div>
             <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                Cargando EPUB…
+                Loading…
             </p>
         </div>
     ),
@@ -70,17 +72,14 @@ const TXTViewer = dynamic(() => import("./TXTViewer"), {
 });
 
 export default function BookViewer() {
-    const { currentFile, fileType } = useStore();
+    const { currentFile, fileType, uiLanguage } = useStore();
+    const t = useMemo(() => translations[uiLanguage], [uiLanguage]);
 
     if (!currentFile) return null;
 
-    // PDF needs overflow-visible so it can grow + scroll via parent container
-    // EPUB/TXT need overflow-hidden so their internal scroll works at fixed height
-    const overflowClass = fileType === 'pdf' ? 'overflow-visible' : 'overflow-hidden';
-
     return (
         <div
-            className={`w-full ${fileType === 'pdf' ? '' : 'h-full'} ${overflowClass} rounded-xl`}
+            className="relative w-full h-full overflow-hidden rounded-xl"
             style={{
                 background: 'var(--bg-surface)',
                 border: '1px solid var(--border)',
@@ -91,6 +90,8 @@ export default function BookViewer() {
             {fileType === 'pdf' && <PDFViewer />}
             {fileType === 'epub' && <EpubViewer />}
             {fileType === 'txt' && <TXTViewer />}
+            {/* t is available for any future localized overlays */}
+            {t && null}
         </div>
     );
 }

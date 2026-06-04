@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { UILanguage } from '@/lib/translations';
 
 export type FileType = 'epub' | 'pdf' | 'txt';
 export type Language = 'it' | 'es' | 'en' | 'fr' | 'de' | 'pt' | 'ja' | 'zh';
@@ -17,6 +18,7 @@ export interface Rendition {
     on: (event: string, listener: (...args: unknown[]) => void) => void;
     themes: {
         default: (styles: Record<string, unknown>) => void;
+        fontSize: (size: string) => void;
         [key: string]: unknown;
     };
     manager?: unknown;
@@ -63,6 +65,10 @@ export interface SmartReadStore {
     // EPUB Rendition (Internal use for imperative control)
     epubRendition: Rendition | null;
     setEpubRendition: (rendition: Rendition | null) => void;
+
+    // UI Language (i18n)
+    uiLanguage: UILanguage;
+    setUiLanguage: (lang: UILanguage) => void;
 }
 
 export const useStore = create<SmartReadStore>((set) => ({
@@ -109,7 +115,7 @@ export const useStore = create<SmartReadStore>((set) => ({
     // Translation / Selection State
     selectedText: null,
     selectionPosition: null,
-    targetLanguage: 'es',
+    targetLanguage: 'en',
     isTranslationLoading: false,
     translationResult: null,
 
@@ -127,4 +133,8 @@ export const useStore = create<SmartReadStore>((set) => ({
     // EPUB Rendition (Internal use for imperative control)
     epubRendition: null,
     setEpubRendition: (rendition) => set({ epubRendition: rendition }),
+
+    // UI Language — default 'en', will be overridden client-side by browser detection
+    uiLanguage: 'en',
+    setUiLanguage: (lang) => set({ uiLanguage: lang }),
 }));

@@ -1,14 +1,16 @@
 "use client";
 
-import { useState, useMemo, useCallback, useRef } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { ReactReader } from "react-reader";
 import { useStore } from "@/store/useStore";
 import { Loader2 } from "lucide-react";
+import translations from "@/lib/translations";
 
 type EpubLocation = string | number;
 type EpubRendition = {
     themes: {
         default: (theme: Record<string, Record<string, string>>) => void;
+        fontSize: (size: string) => void;
     };
     display: (location: EpubLocation) => void;
     ready: Promise<void>;
@@ -19,10 +21,23 @@ type EpubRendition = {
     };
     currentLocation: () => { start?: { cfi: string } } | null;
     on: (event: "selected", callback: (cfiRange: string, contents: EpubContents) => void) => void;
+    book: {
+        ready: Promise<void>;
+        spine: { items: unknown[] };
+    };
+    hooks: {
+        content: {
+            register: (fn: (contents: { document: Document }) => void) => void;
+        };
+    };
 };
 type EpubContents = {
     window: Window;
 };
+
+// Threshold to skip location generation (avoids freezing on large books)
+const LARGE_BOOK_SPINE_THRESHOLD = 60;
+const LARGE_BOOK_SIZE_BYTES = 4 * 1024 * 1024; // 4 MB
 
 export default function EpubViewer() {
     const {
@@ -35,37 +50,61 @@ export default function EpubViewer() {
         setCurrentPage,
         setTotalPages,
         setEpubRendition,
+        zoomLevel,
+        uiLanguage,
     } = useStore();
 
+    const t = useMemo(() => translations[uiLanguage], [uiLanguage]);
     const [location, setLocation] = useState<EpubLocation>(currentLocation || 0);
     const [isReaderReady, setIsReaderReady] = useState(false);
     const renditionRef = useRef<EpubRendition | null>(null);
+    const isLargeBookRef = useRef(false);
 
-    // Paginated mode for best compatibility
+    // scrolled-continuous is most compatible across epub types.
     const epubOptions = useMemo(() => ({
-        flow: "paginated",
-        manager: "default",
+        flow: "scrolled-continuous",
+        manager: "continuous",
         width: "100%",
         height: "100%",
     }), []);
 
-    const url = useMemo(() => {
-        if (!currentFile) return null;
-        try {
-            if (currentFile instanceof File) return URL.createObjectURL(currentFile);
-            return currentFile as string;
-        } catch (error) {
-            console.error("Error creando URL del EPUB:", error);
-            return null;
+    // epubjs determineType() checks file extension on the URL.
+    // Blob URLs have no extension → falls to DIRECTORY branch → fails.
+    // Fix: read File as ArrayBuffer so epubjs treats it as INPUT_TYPE.BINARY.
+    const [epubData, setEpubData] = useState<ArrayBuffer | string | null>(null);
+
+    useEffect(() => {
+        if (!currentFile) { setEpubData(null); return; }
+        if (currentFile instanceof File) {
+            // Track file size for large book detection
+            if (currentFile.size > LARGE_BOOK_SIZE_BYTES) {
+                isLargeBookRef.current = true;
+            }
+            const reader = new FileReader();
+            reader.onload = (e) => setEpubData(e.target?.result as ArrayBuffer ?? null);
+            reader.onerror = () => setEpubData(null);
+            reader.readAsArrayBuffer(currentFile);
+        } else {
+            setEpubData(currentFile as string);
         }
+        return () => { setIsReaderReady(false); };
     }, [currentFile]);
+
+    // Dynamic zoom: update EPUB font size when zoomLevel changes
+    useEffect(() => {
+        if (renditionRef.current && isReaderReady) {
+            try {
+                renditionRef.current.themes.fontSize(`${zoomLevel}%`);
+            } catch { /* silent — some renditions don't support fontSize */ }
+        }
+    }, [zoomLevel, isReaderReady]);
 
     const onLocationChanged = useCallback((loc: EpubLocation) => {
         setLocation(loc);
         if (typeof loc === "string") {
             setCurrentLocation(loc);
             try {
-                if ((renditionRef.current?.locations?.length() ?? 0) > 0) {
+                if (!isLargeBookRef.current && (renditionRef.current?.locations?.length() ?? 0) > 0) {
                     const current = renditionRef.current?.currentLocation();
                     if (current?.start) {
                         const page = renditionRef.current?.locations?.locationFromCfi(current.start.cfi) ?? 0;
@@ -82,31 +121,58 @@ export default function EpubViewer() {
         setEpubRendition(rendition as unknown as import('@/store/useStore').Rendition);
         setIsReaderReady(true);
 
-        // Apply a comfortable reading theme
-        rendition.themes.default({
-            body: {
-                "font-family": "'Lora', Georgia, serif",
-                "font-size": "110%",
-                "padding": "0 16px",
-                "color": "#e2e0f0",
-                "background": "#0f0f1a",
-                "line-height": "1.8",
-            },
-            p: { "line-height": "1.8", "margin-bottom": "1em" },
-            a: { "color": "#818cf8" },
+        // Set initial font size based on current zoom
+        try {
+            rendition.themes.fontSize(`${zoomLevel}%`);
+        } catch { /* silent */ }
+
+        // Improve typography and ensure smooth scrolling inside EPUB iframe
+        rendition.hooks.content.register((contents: { document: Document }) => {
+            const doc = contents.document;
+            if (!doc) return;
+            const style = doc.createElement('style');
+            style.textContent = `
+                body {
+                    font-family: 'Lora', Georgia, serif !important;
+                    line-height: 1.8 !important;
+                    padding: 0 8px !important;
+                    overflow-y: auto !important;
+                    -webkit-overflow-scrolling: touch !important;
+                    touch-action: pan-y !important;
+                }
+                p { line-height: 1.8 !important; margin-bottom: 1em !important; }
+                * { max-width: 100% !important; box-sizing: border-box !important; }
+                img { height: auto !important; }
+            `;
+            doc.head.appendChild(style);
         });
 
         if (currentLocation) {
             try { rendition.display(currentLocation); } catch { /* silent */ }
         }
 
-        rendition.ready.then(() => {
-            try { return rendition.locations.generate(1000); } catch { return []; }
-        }).then((locations: { length: number } | Array<unknown> | undefined) => {
-            if (locations) setTotalPages((locations as { length: number }).length);
-        });
+        // Determine if this is a large book by spine count
+        const book = rendition.book;
+        if (book?.spine?.items?.length > LARGE_BOOK_SPINE_THRESHOLD) {
+            isLargeBookRef.current = true;
+        }
 
-        // Text selection for translation
+        // Generate locations only for small/medium books
+        if (book?.ready && !isLargeBookRef.current) {
+            book.ready.then(() => {
+                try { return rendition.locations.generate(1600); } catch { return []; }
+            }).then((locations: { length: number } | Array<unknown> | undefined) => {
+                if (locations) setTotalPages((locations as { length: number }).length);
+            }).catch(() => { /* location generation optional */ });
+        } else if (book?.ready && isLargeBookRef.current) {
+            // For large books, use spine item count as total "chapters"
+            book.ready.then(() => {
+                const spineCount = book.spine?.items?.length ?? 0;
+                if (spineCount > 0) setTotalPages(spineCount);
+            }).catch(() => {});
+        }
+
+        // Text selection for translation — only on mouseup/touchend to avoid spam
         rendition.on("selected", (_cfiRange: string, contents: EpubContents) => {
             try {
                 const selection = contents.window.getSelection();
@@ -127,15 +193,18 @@ export default function EpubViewer() {
                 }
             } catch (e) { console.error(e); }
         });
-    }, [currentLocation, setTotalPages, setSelectedText, setSelectionPosition, setEpubRendition]);
+    }, [currentLocation, setTotalPages, setSelectedText, setSelectionPosition, setEpubRendition, zoomLevel]);
 
-    if (!url) {
+    if (!epubData) {
         return (
             <div
-                className="flex items-center justify-center h-full text-sm"
-                style={{ color: 'var(--text-muted)' }}
+                className="flex flex-col items-center justify-center h-full gap-4"
+                style={{ background: 'var(--bg-surface)', minHeight: '400px' }}
             >
-                Error al cargar el archivo.
+                <div className="p-4 rounded-2xl" style={{ background: 'rgba(20,184,166,0.1)', border: '1px solid rgba(20,184,166,0.2)' }}>
+                    <Loader2 className="w-8 h-8 animate-spin" style={{ color: 'var(--teal)' }} />
+                </div>
+                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{t.readingFile}</p>
             </div>
         );
     }
@@ -163,13 +232,13 @@ export default function EpubViewer() {
                         />
                     </div>
                     <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                        Cargando EPUB…
+                        {t.loadingEpub}
                     </p>
                 </div>
             )}
 
             <ReactReader
-                url={url}
+                url={epubData}
                 location={location}
                 locationChanged={onLocationChanged}
                 getRendition={handleRendition}

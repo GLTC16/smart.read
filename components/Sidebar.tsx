@@ -2,6 +2,8 @@
 
 import { useStore } from '@/store/useStore';
 import { BookOpen, X, LogOut } from 'lucide-react';
+import { useMemo } from 'react';
+import translations from '@/lib/translations';
 
 interface SidebarProps {
     isOpen: boolean;
@@ -9,7 +11,8 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
-    const { toc, setCurrentPage, fileType, epubRendition, clearFile } = useStore();
+    const { toc, setCurrentPage, fileType, epubRendition, clearFile, uiLanguage } = useStore();
+    const t = useMemo(() => translations[uiLanguage], [uiLanguage]);
 
     const handleNav = (item: import('@/store/useStore').TOCItem) => {
         if (fileType === 'epub') {
@@ -78,7 +81,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                             className="font-bold text-base"
                             style={{ color: 'var(--text-primary)' }}
                         >
-                            Contenido
+                            {t.contents}
                         </span>
                     </div>
                     <button
@@ -110,7 +113,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         >
                             <BookOpen size={32} style={{ opacity: 0.4 }} />
                             <p className="text-sm text-center">
-                                Sin tabla de contenidos disponible.
+                                {t.noTocAvailable}
                             </p>
                         </div>
                     ) : (
@@ -172,7 +175,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         }}
                     >
                         <LogOut size={16} />
-                        <span>Cerrar libro</span>
+                        <span>{t.closeBook}</span>
                     </button>
                     <p
                         className="text-center text-xs mt-3"

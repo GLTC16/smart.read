@@ -1,4 +1,4 @@
-// SmartRead — redesigned v3
+// SmartRead — redesigned v3 with i18n
 "use client";
 
 import { useStore } from "@/store/useStore";
@@ -6,13 +6,23 @@ import Sidebar from "@/components/Sidebar";
 import BookViewer from "@/components/BookViewer";
 import BottomBar from "@/components/BottomBar";
 import TranslationTooltip from "@/components/TranslationTooltip";
+import translations, { detectBrowserLanguage } from "@/lib/translations";
 import { Upload, BookOpen, Zap, Globe, Shield } from "lucide-react";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 
 export default function Home() {
-  const { currentFile, setFile } = useStore();
+  const { currentFile, setFile, uiLanguage, setUiLanguage, setTargetLanguage } = useStore();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
+
+  const t = useMemo(() => translations[uiLanguage], [uiLanguage]);
+
+  // Detect browser language on mount
+  useEffect(() => {
+    const detected = detectBrowserLanguage();
+    setUiLanguage(detected);
+    setTargetLanguage(detected);
+  }, [setUiLanguage, setTargetLanguage]);
 
   const processFile = useCallback(
     (file: File) => {
@@ -57,24 +67,24 @@ export default function Home() {
   const features = [
     {
       icon: <Zap className="w-5 h-5" />,
-      title: "Sin instalaciones",
-      desc: "Lee PDF, EPUB y TXT directamente en tu navegador. Todo offline.",
+      title: t.featureNoInstall,
+      desc: t.featureNoInstallDesc,
       accent: "var(--accent)",
       bg: "rgba(99,102,241,0.08)",
       border: "rgba(99,102,241,0.18)",
     },
     {
       icon: <Globe className="w-5 h-5" />,
-      title: "Traducción instantánea",
-      desc: "Selecciona cualquier palabra o frase y obtén su traducción al instante.",
+      title: t.featureTranslate,
+      desc: t.featureTranslateDesc,
       accent: "var(--teal)",
       bg: "rgba(20,184,166,0.08)",
       border: "rgba(20,184,166,0.18)",
     },
     {
       icon: <Shield className="w-5 h-5" />,
-      title: "100% privado",
-      desc: "Tus archivos nunca salen de tu dispositivo. Zero servidores.",
+      title: t.featurePrivate,
+      desc: t.featurePrivateDesc,
       accent: "#c4b5fd",
       bg: "rgba(139,92,246,0.08)",
       border: "rgba(139,92,246,0.18)",
@@ -85,7 +95,7 @@ export default function Home() {
     { label: "PDF", color: "#f87171", bg: "rgba(239,68,68,0.12)", border: "rgba(239,68,68,0.25)" },
     { label: "EPUB", color: "#818cf8", bg: "rgba(99,102,241,0.12)", border: "rgba(99,102,241,0.25)" },
     { label: "TXT", color: "#2dd4bf", bg: "rgba(20,184,166,0.12)", border: "rgba(20,184,166,0.25)" },
-    { label: "Traducción IA", color: "#c4b5fd", bg: "rgba(139,92,246,0.12)", border: "rgba(139,92,246,0.25)" },
+    { label: t.badgeAITranslation, color: "#c4b5fd", bg: "rgba(139,92,246,0.12)", border: "rgba(139,92,246,0.25)" },
   ];
 
   return (
@@ -173,7 +183,7 @@ export default function Home() {
                   lineHeight: 1.08,
                 }}
               >
-                SmartRead
+                {t.heroTitle}
               </h1>
 
               {/* Tagline */}
@@ -181,15 +191,14 @@ export default function Home() {
                 className="text-xl sm:text-2xl font-semibold mb-2 text-center"
                 style={{ color: "var(--text-secondary)" }}
               >
-                Lee más rápido.{" "}
-                <span style={{ color: "var(--teal-hover)" }}>Entiende mejor.</span>
+                {t.tagline1}{" "}
+                <span style={{ color: "var(--teal-hover)" }}>{t.tagline2}</span>
               </p>
               <p
                 className="text-sm text-center mb-8 max-w-md leading-relaxed"
                 style={{ color: "var(--text-muted)" }}
               >
-                El lector inteligente para estudiantes. Sube tu libro, selecciona
-                cualquier palabra y tradúcela al instante.
+                {t.heroSubtitle}
               </p>
 
               {/* Format badges */}
@@ -262,15 +271,15 @@ export default function Home() {
                       className="text-xl font-bold mb-1"
                       style={{ color: "var(--text-primary)" }}
                     >
-                      {isDragOver ? "¡Suelta aquí tu libro!" : "Arrastra tu libro aquí"}
+                      {isDragOver ? t.dragTitleActive : t.dragTitle}
                     </p>
                     <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                      o{" "}
+                      {t.dragSubtitle}{" "}
                       <span
                         className="font-semibold underline underline-offset-2"
                         style={{ color: "var(--accent-hover)", cursor: "pointer" }}
                       >
-                        haz clic para seleccionar
+                        {t.clickToSelect}
                       </span>
                     </p>
                   </div>
@@ -347,12 +356,12 @@ export default function Home() {
               className="relative z-10 text-xs mt-6 pb-5 text-center"
               style={{ color: "var(--text-disabled)" }}
             >
-              SmartRead v2.0 — Tus archivos nunca salen de tu dispositivo.
+              {t.footerNote}
             </p>
           </div>
         ) : (
           /* ── READER VIEW ─────────────────────────────────── */
-          <div className="flex-1 overflow-auto pb-24 relative">
+          <div className="flex-1 overflow-hidden pb-24 relative">
             <BookViewer />
           </div>
         )}
