@@ -138,6 +138,7 @@ export default function TranslationTooltip() {
 
     return (
         <div
+            id="translation-tooltip"
             ref={tooltipRef}
             className="fixed z-[9999] flex flex-col overflow-hidden"
             style={{

@@ -94,9 +94,11 @@ export default function PDFViewer() {
         return () => window.removeEventListener('resize', calculateWidth);
     }, [isMobile]);
 
-    // Handle text selection — only on mouseup/touchend to avoid spamming translations
     useEffect(() => {
-        const handleSelectionEnd = () => {
+        const handleSelectionEnd = (e: Event) => {
+            // Ignore if the click was inside the translation tooltip
+            if (e.target && (e.target as Element).closest('#translation-tooltip')) return;
+
             // Small delay to let the selection finalize
             setTimeout(() => {
                 const selection = window.getSelection();

@@ -49,7 +49,10 @@ export default function TXTViewer() {
 
     // Handle text selection — only on mouseup/touchend to avoid spam
     useEffect(() => {
-        const handleSelectionEnd = () => {
+        const handleSelectionEnd = (e: Event) => {
+            // Ignore if the click was inside the translation tooltip
+            if (e.target && (e.target as Element).closest('#translation-tooltip')) return;
+
             setTimeout(() => {
                 const selection = window.getSelection();
                 if (!selection || selection.rangeCount === 0) return;

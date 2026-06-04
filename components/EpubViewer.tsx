@@ -181,7 +181,7 @@ export default function EpubViewer() {
                 if (text) {
                     const range = selection.getRangeAt(0);
                     const rect = range.getBoundingClientRect();
-                    const iframe = document.querySelector(".epub-viewer-container iframe");
+                    const iframe = (contents.window.frameElement as Element) || document.querySelector(".epub-viewer-container iframe");
                     if (iframe) {
                         const iframeRect = iframe.getBoundingClientRect();
                         setSelectedText(text);
