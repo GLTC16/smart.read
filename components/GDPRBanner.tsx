@@ -43,20 +43,26 @@ export default function GDPRBanner() {
           </div>
         </div>
 
-        <div className="flex flex-row w-full md:w-auto gap-3 shrink-0">
-          <button
-            onClick={handleReject}
-            className="flex-1 md:flex-none px-6 py-3 rounded-xl border border-slate-600 text-slate-300 hover:bg-slate-800 hover:text-white font-medium transition-all"
-          >
-            Rechazar
-          </button>
-          <button
-            onClick={handleAccept}
-            className="flex-1 md:flex-none px-6 py-3 rounded-xl bg-purple-600 text-white hover:bg-purple-500 font-medium transition-all shadow-lg shadow-purple-900/50"
-          >
-            Aceptar Todo
-          </button>
-        </div>
+          <div className="flex flex-col sm:flex-row w-full md:w-auto gap-2 shrink-0">
+            <button
+              onClick={handleReject}
+              className="px-4 py-2 text-sm rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-800 hover:text-white transition-all whitespace-nowrap"
+            >
+              Rechazar
+            </button>
+            <button
+              onClick={handleReject}
+              className="px-4 py-2 text-sm rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-800 hover:text-white transition-all whitespace-nowrap"
+            >
+              Solo Esenciales
+            </button>
+            <button
+              onClick={handleAccept}
+              className="px-4 py-2 text-sm rounded-lg bg-purple-600 text-white hover:bg-purple-500 font-bold transition-all shadow-lg shadow-purple-900/50 whitespace-nowrap"
+            >
+              Aceptar Todo
+            </button>
+          </div>
 
       </div>
     </div>

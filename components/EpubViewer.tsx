@@ -144,6 +144,9 @@ export default function EpubViewer() {
                     overflow: auto !important;
                     -webkit-overflow-scrolling: touch !important;
                     touch-action: pan-x pan-y pinch-zoom !important;
+                    -webkit-user-select: text !important;
+                    user-select: text !important;
+                    -webkit-touch-callout: default !important;
                 }
                 p { line-height: 1.8 !important; margin-bottom: 1em !important; }
                 * { max-width: 100% !important; box-sizing: border-box !important; }
@@ -158,7 +161,10 @@ export default function EpubViewer() {
                 selectionTimeout = setTimeout(() => {
                     try {
                         const selection = win.getSelection();
-                        if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return;
+                        if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+                            useStore.getState().resetSelection();
+                            return;
+                        }
                         
                         const text = selection.toString().trim();
                         if (!text) return;
@@ -219,33 +225,32 @@ export default function EpubViewer() {
         // 3. Bulletproof fallback: use epub.js native 'selected' event
         rendition.on('selected', (cfiRange: string, contents: any) => {
             try {
-                rendition.getRange(cfiRange).then((range: Range) => {
-                    if (!range) return;
-                    const text = range.toString().trim();
-                    if (!text) return;
-                    
-                    const rect = range.getBoundingClientRect();
-                    const win = contents.window;
-                    
-                    let iframe: HTMLIFrameElement | null = null;
-                    try { iframe = win.frameElement as HTMLIFrameElement; } catch (e) {}
-                    
-                    if (!iframe && containerRef.current) {
-                        const iframes = Array.from(containerRef.current.querySelectorAll('iframe'));
-                        for (const f of iframes) {
-                            try { if (f.contentWindow === win) { iframe = f; break; } } catch (e) {}
-                        }
-                        if (!iframe && iframes.length === 1) iframe = iframes[0];
+                const range = rendition.getRange(cfiRange) as unknown as Range;
+                if (!range) return;
+                const text = range.toString().trim();
+                if (!text) return;
+                
+                const rect = range.getBoundingClientRect();
+                const win = contents.window;
+                
+                let iframe: HTMLIFrameElement | null = null;
+                try { iframe = win.frameElement as HTMLIFrameElement; } catch (e) {}
+                
+                if (!iframe && containerRef.current) {
+                    const iframes = Array.from(containerRef.current.querySelectorAll('iframe'));
+                    for (const f of iframes) {
+                        try { if (f.contentWindow === win) { iframe = f; break; } } catch (e) {}
                     }
-                    
-                    const iframeRect = iframe ? iframe.getBoundingClientRect() : { left: 0, top: 0 };
-                    
-                    setSelectedText(text);
-                    setSelectionPosition({
-                        x: iframeRect.left + rect.left + rect.width / 2,
-                        y: iframeRect.top + rect.top,
-                    });
-                }).catch(() => {});
+                    if (!iframe && iframes.length === 1) iframe = iframes[0];
+                }
+                
+                const iframeRect = iframe ? iframe.getBoundingClientRect() : { left: 0, top: 0 };
+                
+                setSelectedText(text);
+                setSelectionPosition({
+                    x: iframeRect.left + rect.left + rect.width / 2,
+                    y: iframeRect.top + rect.top,
+                });
             } catch (e) {
                 console.error("Native epub selection error:", e);
             }
@@ -261,19 +266,13 @@ export default function EpubViewer() {
             isLargeBookRef.current = true;
         }
 
-        // Generate locations only for small/medium books
-        if (book?.ready && !isLargeBookRef.current) {
+        // Always generate locations so the slider can work universally
+        if (book?.ready) {
             book.ready.then(() => {
                 try { return rendition.locations.generate(1600); } catch { return []; }
             }).then((locations: { length: number } | Array<unknown> | undefined) => {
                 if (locations) setTotalPages((locations as { length: number }).length);
             }).catch(() => { /* location generation optional */ });
-        } else if (book?.ready && isLargeBookRef.current) {
-            // For large books, use spine item count as total "chapters"
-            book.ready.then(() => {
-                const spineCount = book.spine?.items?.length ?? 0;
-                if (spineCount > 0) setTotalPages(spineCount);
-            }).catch(() => {});
         }
 
         // Generación de localizaciones omitida por brevedad

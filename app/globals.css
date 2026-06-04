@@ -76,6 +76,24 @@ body {
     min-height: 100vh;
 }
 
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  min-height: 100vh;
+  /* Next line is crucial for iOS Safari Zoom Lock */
+  touch-action: pan-x pan-y;
+}
+
+/* Allow pinch zoom ONLY inside the book readers */
+.epub-viewer-container,
+.epub-viewer-container iframe,
+.react-pdf__Page,
+.react-pdf__Document {
+  touch-action: pan-x pan-y pinch-zoom !important;
+}
+
 /* ============================================================
    READING PROGRESS BAR
    ============================================================ */
