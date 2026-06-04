@@ -50,8 +50,8 @@ export async function deleteAccount() {
     // For this implementation, we use the service role key to delete the user completely.
     const { createClient: createAdminClient } = await import('@supabase/supabase-js');
     const supabaseAdmin = createAdminClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
+      process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+      process.env.SUPABASE_SERVICE_ROLE_KEY || ''
     );
 
     const { error } = await supabaseAdmin.auth.admin.deleteUser(user.id);
