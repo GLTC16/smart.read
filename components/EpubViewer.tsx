@@ -5,6 +5,7 @@ import { ReactReader } from "react-reader";
 import { useStore } from "@/store/useStore";
 import { Loader2 } from "lucide-react";
 import translations from "@/lib/translations";
+import PageCounter from "./PageCounter";
 
 type EpubLocation = string | number;
 type EpubRendition = {
@@ -48,6 +49,8 @@ export default function EpubViewer() {
         setSelectedText,
         setSelectionPosition,
         setCurrentPage,
+        currentPage,
+        totalPages,
         setTotalPages,
         setEpubRendition,
         zoomLevel,
@@ -329,6 +332,7 @@ export default function EpubViewer() {
                 tocChanged={setToc}
                 epubOptions={epubOptions}
             />
+            <PageCounter current={currentPage} total={totalPages} />
         </div>
     );
 }

@@ -51,7 +51,10 @@ export default function GDPRBanner() {
               Rechazar
             </button>
             <button
-              onClick={handleReject}
+              onClick={() => {
+                Cookies.set('gdpr_consent', 'essentials_only', { expires: 180 });
+                setShowBanner(false);
+              }}
               className="px-4 py-2 text-sm rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-800 hover:text-white transition-all whitespace-nowrap"
             >
               Solo Esenciales
