@@ -110,6 +110,32 @@ export default function AuthUI() {
         </div>
       )}
 
+      {/* Tabs for Login / Register */}
+      {(mode === 'login' || mode === 'register') && (
+        <div className="flex p-1 bg-black/20 rounded-xl mb-6">
+          <button
+            onClick={() => { setMode('login'); setError(null); setMessage(null); }}
+            className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${
+              mode === 'login'
+                ? 'bg-purple-600/30 text-white shadow-sm border border-purple-500/30'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            Iniciar Sesión
+          </button>
+          <button
+            onClick={() => { setMode('register'); setError(null); setMessage(null); }}
+            className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${
+              mode === 'register'
+                ? 'bg-purple-600/30 text-white shadow-sm border border-purple-500/30'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            Regístrate
+          </button>
+        </div>
+      )}
+
       {message && (
         <div className="mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/50 text-emerald-400 text-sm">
           {message}
@@ -197,14 +223,9 @@ export default function AuthUI() {
       )}
 
       <div className="mt-8 pt-6 border-t border-white/10 flex flex-col gap-3 text-sm">
-        {mode !== 'login' && (
+        {mode === 'recovery' && (
           <button onClick={() => { setMode('login'); setError(null); }} className="text-purple-400 hover:text-purple-300 transition-colors">
-            Ya tengo una cuenta. Iniciar sesión.
-          </button>
-        )}
-        {mode !== 'register' && mode !== 'dev' && (
-          <button onClick={() => { setMode('register'); setError(null); }} className="text-slate-400 hover:text-white transition-colors">
-            ¿No tienes cuenta? Regístrate gratis.
+            Volver a iniciar sesión
           </button>
         )}
         {mode === 'login' && (

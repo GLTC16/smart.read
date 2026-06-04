@@ -100,6 +100,31 @@ export default function ProfilePage() {
               </form>
             </section>
 
+            {/* Performance */}
+            <section className="pt-8 border-t border-white/10">
+              <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                <span className="text-teal-400">⚡</span> Optimización y Rendimiento
+              </h2>
+              <div className="flex items-center justify-between p-6 bg-white/5 border border-white/10 rounded-2xl">
+                <div>
+                  <h3 className="text-white font-bold">Limpiar Caché Local</h3>
+                  <p className="text-sm text-slate-400 mt-1 max-w-md">
+                    Si tienes problemas con sesiones atascadas (especialmente en Safari), usa este botón para forzar una limpieza completa del navegador.
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    localStorage.clear();
+                    sessionStorage.clear();
+                    window.location.href = '/login';
+                  }}
+                  className="px-6 py-3 bg-teal-600/20 text-teal-400 border border-teal-500/50 hover:bg-teal-600 hover:text-white rounded-xl font-medium transition-all"
+                >
+                  Limpiar Caché
+                </button>
+              </div>
+            </section>
+
             {/* Danger Zone */}
             <section className="pt-8 border-t border-red-500/20">
               <h2 className="text-xl font-bold text-red-400 mb-4 flex items-center gap-2">
