@@ -136,9 +136,9 @@ export default function EpubViewer() {
                     font-family: 'Lora', Georgia, serif !important;
                     line-height: 1.8 !important;
                     padding: 0 8px !important;
-                    overflow-y: auto !important;
+                    overflow: auto !important;
                     -webkit-overflow-scrolling: touch !important;
-                    touch-action: pan-y !important;
+                    touch-action: pan-x pan-y pinch-zoom !important;
                 }
                 p { line-height: 1.8 !important; margin-bottom: 1em !important; }
                 * { max-width: 100% !important; box-sizing: border-box !important; }
@@ -181,7 +181,7 @@ export default function EpubViewer() {
                 if (text) {
                     const range = selection.getRangeAt(0);
                     const rect = range.getBoundingClientRect();
-                    const iframe = document.querySelector("div.react-reader iframe");
+                    const iframe = document.querySelector(".epub-viewer-container iframe");
                     if (iframe) {
                         const iframeRect = iframe.getBoundingClientRect();
                         setSelectedText(text);
@@ -211,7 +211,7 @@ export default function EpubViewer() {
 
     return (
         <div
-            className="relative w-full h-full"
+            className="relative w-full h-full epub-viewer-container"
             style={{ minHeight: '500px', background: 'var(--bg-surface)' }}
         >
             {!isReaderReady && (

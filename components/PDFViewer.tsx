@@ -176,12 +176,12 @@ export default function PDFViewer() {
             style={{
                 background: 'var(--bg-surface)',
                 WebkitOverflowScrolling: 'touch',
-                touchAction: 'pan-y pinch-zoom',
+                touchAction: 'pan-x pan-y pinch-zoom',
             }}
         >
             <div
                 ref={containerRef}
-                className="flex justify-center pt-8 pb-32 relative"
+                className="flex justify-center pt-8 pb-32 relative min-w-max"
                 onTouchStart={handleTouchStart}
                 onTouchEnd={handleTouchEnd}
             >

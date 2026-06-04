@@ -36,8 +36,18 @@ export default function TranslationTooltip() {
 
     const tooltipRef = useRef<HTMLDivElement>(null);
     const [copied, setCopied] = useState(false);
+    
+    // Drag state
+    const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+    const isDragging = useRef(false);
+    const dragStart = useRef({ x: 0, y: 0 });
 
     const t = useMemo(() => translations[uiLanguage], [uiLanguage]);
+
+    // Reset drag offset when selection changes
+    useEffect(() => {
+        setDragOffset({ x: 0, y: 0 });
+    }, [selectionPosition]);
 
     // Fetch translation when text or language changes
     useEffect(() => {
@@ -84,6 +94,25 @@ export default function TranslationTooltip() {
         setTimeout(() => setCopied(false), 2000);
     };
 
+    const handlePointerDown = (e: React.PointerEvent) => {
+        isDragging.current = true;
+        dragStart.current = { x: e.clientX - dragOffset.x, y: e.clientY - dragOffset.y };
+        if (tooltipRef.current) tooltipRef.current.setPointerCapture(e.pointerId);
+    };
+
+    const handlePointerMove = (e: React.PointerEvent) => {
+        if (!isDragging.current) return;
+        setDragOffset({
+            x: e.clientX - dragStart.current.x,
+            y: e.clientY - dragStart.current.y
+        });
+    };
+
+    const handlePointerUp = (e: React.PointerEvent) => {
+        isDragging.current = false;
+        if (tooltipRef.current) tooltipRef.current.releasePointerCapture(e.pointerId);
+    };
+
     if (!selectedText || !selectionPosition) return null;
 
     // Smart positioning: clamp horizontally and flip vertically if needed
@@ -104,21 +133,24 @@ export default function TranslationTooltip() {
 
     const activeLang = LANGUAGES.find(l => l.code === targetLanguage);
 
+    const finalX = clampedX + dragOffset.x;
+    const finalY = topPosition + dragOffset.y;
+
     return (
         <div
             ref={tooltipRef}
             className="fixed z-[9999] flex flex-col overflow-hidden"
             style={{
                 width: `${TOOLTIP_WIDTH}px`,
-                left: clampedX,
-                top: topPosition,
+                left: finalX,
+                top: finalY,
                 transform: showAbove
                     ? 'translateX(-50%) translateY(-100%)'
                     : 'translateX(-50%)',
                 animation: 'tooltipIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
-                background: 'rgba(12, 12, 28, 0.92)',
-                backdropFilter: 'blur(32px) saturate(200%)',
-                WebkitBackdropFilter: 'blur(32px) saturate(200%)',
+                background: 'rgba(12, 12, 28, 0.85)',
+                backdropFilter: 'blur(24px) saturate(200%)',
+                WebkitBackdropFilter: 'blur(24px) saturate(200%)',
                 border: '1px solid rgba(99,102,241,0.25)',
                 borderRadius: '16px',
                 boxShadow: '0 8px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(99,102,241,0.1), inset 0 1px 0 rgba(255,255,255,0.06)',
@@ -126,9 +158,13 @@ export default function TranslationTooltip() {
         >
             {/* Header */}
             <div
-                className="flex items-center justify-between px-4 py-3"
+                className="flex items-center justify-between px-4 py-3 cursor-grab active:cursor-grabbing touch-none"
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
+                onPointerCancel={handlePointerUp}
                 style={{
-                    background: 'linear-gradient(135deg, rgba(99,102,241,0.2) 0%, rgba(20,184,166,0.1) 100%)',
+                    background: 'linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(20,184,166,0.08) 100%)',
                     borderBottom: '1px solid rgba(255,255,255,0.05)',
                 }}
             >

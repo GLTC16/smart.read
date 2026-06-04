@@ -85,7 +85,7 @@ export const useStore = create<SmartReadStore>((set) => ({
         selectedText: null,
         selectionPosition: null,
         translationResult: null,
-        zoomLevel: 100,
+        zoomLevel: type === 'pdf' ? 60 : 100,
     }),
     clearFile: () => set({
         currentFile: null,
