@@ -75,25 +75,37 @@ export default function EpubViewer() {
     // epubjs determineType() checks file extension on the URL.
     // Blob URLs have no extension → falls to DIRECTORY branch → fails.
     // Fix: read File as ArrayBuffer so epubjs treats it as INPUT_TYPE.BINARY.
-    const [epubData, setEpubData] = useState<ArrayBuffer | string | null>(null);
+    const [epubData, setEpubData] = useState<string | null>(null);
 
     useEffect(() => {
-        if (!currentFile) { setEpubData(null); return; }
+        if (!currentFile) {
+            setEpubData(null);
+            return;
+        }
+
+        let url: string;
+        let isObjectUrl = false;
+
         if (currentFile instanceof File) {
             // Track file size for large book detection
             if (currentFile.size > LARGE_BOOK_SIZE_BYTES) {
                 isLargeBookRef.current = true;
             }
-            const reader = new FileReader();
-            reader.onload = (e) => setEpubData(e.target?.result as ArrayBuffer ?? null);
-            reader.onerror = () => setEpubData(null);
-            reader.readAsArrayBuffer(currentFile);
+            // Use ObjectURL but append a hash to trick epub.js determineType()
+            url = URL.createObjectURL(currentFile) + '#file.epub';
+            isObjectUrl = true;
         } else {
-            setEpubData(currentFile as string);
+            url = currentFile as string;
         }
-        return () => { 
+        
+        setEpubData(url);
+
+        return () => {
             setIsReaderReady(false);
             setEpubRendition(null as any);
+            if (isObjectUrl) {
+                URL.revokeObjectURL(url.split('#')[0]);
+            }
         };
     }, [currentFile, setEpubRendition]);
 
