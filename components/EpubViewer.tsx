@@ -368,6 +368,7 @@ export default function EpubViewer() {
                 getRendition={handleRendition}
                 tocChanged={setToc}
                 epubOptions={epubOptions}
+                // @ts-expect-error - Custom partial styles are allowed at runtime but TS complains about missing required keys
                 readerStyles={{
                     container: { overflow: 'hidden', height: '100%', position: 'relative' },
                     readerArea: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }
