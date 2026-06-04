@@ -3,7 +3,7 @@
 import { useStore } from '@/store/useStore';
 import { translateText } from '@/services/translationService';
 import { useEffect, useRef, useState, useMemo } from 'react';
-import { X, Copy, Globe, Loader2, Check } from 'lucide-react';
+import { X, Copy, Globe, Loader2, Check, GripHorizontal } from 'lucide-react';
 import translations from '@/lib/translations';
 
 const LANGUAGES: { code: import('@/store/useStore').Language; label: string; flag: string }[] = [
@@ -159,27 +159,45 @@ export default function TranslationTooltip() {
         >
             {/* Header */}
             <div
-                className="flex items-center justify-between px-4 py-3 cursor-grab active:cursor-grabbing touch-none"
-                onPointerDown={handlePointerDown}
-                onPointerMove={handlePointerMove}
-                onPointerUp={handlePointerUp}
-                onPointerCancel={handlePointerUp}
+                className="flex items-center justify-between px-4 py-3"
                 style={{
                     background: 'linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(20,184,166,0.08) 100%)',
                     borderBottom: '1px solid rgba(255,255,255,0.05)',
                 }}
             >
-                <div className="flex items-center gap-2">
-                    <Globe size={13} style={{ color: 'var(--accent-hover)' }} />
-                    <span
-                        className="text-xs font-bold uppercase tracking-wider"
-                        style={{ color: 'var(--text-secondary)' }}
+                <div className="flex items-center gap-2 flex-1">
+                    <button
+                        className="flex items-center gap-1.5 px-2 py-1 rounded-md cursor-grab active:cursor-grabbing"
+                        onPointerDown={handlePointerDown}
+                        onPointerMove={handlePointerMove}
+                        onPointerUp={handlePointerUp}
+                        onPointerCancel={handlePointerUp}
+                        style={{
+                            background: 'rgba(99,102,241,0.2)',
+                            border: '1px solid rgba(99,102,241,0.3)',
+                            touchAction: 'none',
+                            userSelect: 'none',
+                            WebkitUserSelect: 'none',
+                        }}
                     >
-                        Auto → {activeLang?.label ?? targetLanguage.toUpperCase()}
-                    </span>
-                    {activeLang && (
-                        <span className="text-sm">{activeLang.flag}</span>
-                    )}
+                        <GripHorizontal size={14} style={{ color: 'var(--accent-hover)' }} />
+                        <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
+                            Reacomodar
+                        </span>
+                    </button>
+                    
+                    <div className="flex items-center gap-1 ml-2 border-l border-[rgba(255,255,255,0.1)] pl-3">
+                        <Globe size={13} style={{ color: 'var(--accent-hover)' }} />
+                        <span
+                            className="text-xs font-bold uppercase tracking-wider hidden sm:inline"
+                            style={{ color: 'var(--text-secondary)' }}
+                        >
+                            {activeLang?.label ?? targetLanguage.toUpperCase()}
+                        </span>
+                        {activeLang && (
+                            <span className="text-sm">{activeLang.flag}</span>
+                        )}
+                    </div>
                 </div>
                 <button
                     onClick={resetSelection}

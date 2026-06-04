@@ -145,6 +145,35 @@ export default function EpubViewer() {
                 img { height: auto !important; }
             `;
             doc.head.appendChild(style);
+
+            // Manual selection handler to bypass epubjs mobile bugs and frameElement cross-origin issues
+            const handleSelection = () => {
+                setTimeout(() => {
+                    try {
+                        const selection = doc.defaultView?.getSelection();
+                        if (!selection || selection.rangeCount === 0) return;
+                        
+                        const text = selection.toString().trim();
+                        if (text) {
+                            const range = selection.getRangeAt(0);
+                            const rect = range.getBoundingClientRect();
+                            
+                            const container = document.querySelector('.epub-viewer-container');
+                            if (container) {
+                                const containerRect = container.getBoundingClientRect();
+                                setSelectedText(text);
+                                setSelectionPosition({
+                                    x: containerRect.left + rect.left + rect.width / 2,
+                                    y: containerRect.top + rect.top,
+                                });
+                            }
+                        }
+                    } catch (e) { console.error(e); }
+                }, 50);
+            };
+
+            doc.addEventListener('mouseup', handleSelection);
+            doc.addEventListener('touchend', handleSelection);
         });
 
         if (currentLocation) {
@@ -172,27 +201,7 @@ export default function EpubViewer() {
             }).catch(() => {});
         }
 
-        // Text selection for translation — only on mouseup/touchend to avoid spam
-        rendition.on("selected", (_cfiRange: string, contents: EpubContents) => {
-            try {
-                const selection = contents.window.getSelection();
-                if (!selection) return;
-                const text = selection.toString().trim();
-                if (text) {
-                    const range = selection.getRangeAt(0);
-                    const rect = range.getBoundingClientRect();
-                    const iframe = (contents.window.frameElement as Element) || document.querySelector(".epub-viewer-container iframe");
-                    if (iframe) {
-                        const iframeRect = iframe.getBoundingClientRect();
-                        setSelectedText(text);
-                        setSelectionPosition({
-                            x: iframeRect.left + rect.left + rect.width / 2,
-                            y: iframeRect.top + rect.top,
-                        });
-                    }
-                }
-            } catch (e) { console.error(e); }
-        });
+        // Generación de localizaciones omitida por brevedad
     }, [currentLocation, setTotalPages, setSelectedText, setSelectionPosition, setEpubRendition, zoomLevel]);
 
     if (!epubData) {
