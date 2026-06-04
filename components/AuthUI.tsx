@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
-import { Mail, Lock, User, Key, ArrowRight, ShieldCheck, Loader2 } from 'lucide-react';
+import { Mail, Lock, User, Key, ArrowRight, ShieldCheck, Loader2, Chrome } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function AuthUI() {
@@ -72,6 +72,22 @@ export default function AuthUI() {
     } catch (err: any) {
       setError(err.message);
     } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleAuth = async () => {
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        }
+      });
+      if (error) throw error;
+    } catch (err: any) {
+      setError(err.message || 'Error con Google Auth');
       setLoading(false);
     }
   };
@@ -155,10 +171,29 @@ export default function AuthUI() {
             className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-medium hover:from-purple-500 hover:to-indigo-500 focus:ring-2 focus:ring-purple-500/50 transition-all flex items-center justify-center disabled:opacity-50"
           >
             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (
-              mode === 'login' ? 'Entrar' : mode === 'register' ? 'Registrarse' : 'Enviar Correo'
+              mode === 'login' ? 'Entrar con Email' : mode === 'register' ? 'Registrarse' : 'Enviar Correo'
             )}
           </button>
         </form>
+      )}
+
+      {mode !== 'dev' && mode !== 'recovery' && (
+        <>
+          <div className="flex items-center gap-4 my-6 opacity-30">
+            <div className="flex-1 h-px bg-white"></div>
+            <span className="text-xs uppercase font-bold text-white tracking-widest">o continúa con</span>
+            <div className="flex-1 h-px bg-white"></div>
+          </div>
+
+          <button
+            onClick={handleGoogleAuth}
+            disabled={loading}
+            className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl bg-white text-slate-900 font-bold hover:bg-slate-100 transition-all disabled:opacity-50"
+          >
+            <Chrome className="w-5 h-5 text-blue-600" />
+            Google
+          </button>
+        </>
       )}
 
       <div className="mt-8 pt-6 border-t border-white/10 flex flex-col gap-3 text-sm">
