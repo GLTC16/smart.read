@@ -44,12 +44,10 @@ export default function PageCounter({ current, total, type = 'page' }: PageCount
 
     return (
         <div
-            className="fixed bottom-20 right-6 z-40 px-4 py-3 rounded-2xl shadow-2xl flex flex-col items-center gap-2"
+            className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[100] px-6 py-4 rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] flex flex-col items-center gap-3 w-[90%] max-w-md border border-white/10"
             style={{
-                background: 'rgba(15, 15, 30, 0.85)',
-                backdropFilter: 'blur(16px)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                minWidth: '200px',
+                background: 'rgba(15, 15, 30, 0.95)',
+                backdropFilter: 'blur(20px)',
             }}
         >
             <span className="text-sm font-bold text-white tracking-wide">

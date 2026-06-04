@@ -79,26 +79,7 @@ export default function TranslationTooltip() {
         return () => { cancelled = true; };
     }, [selectedText, targetLanguage, setIsTranslationLoading, setTranslationResult, t]);
 
-    // Close on click outside
-    useEffect(() => {
-        function handleClickOutside(event: MouseEvent | TouchEvent) {
-            if (!tooltipRef.current) return;
-            
-            // Ignore if clicking the translation tooltip itself
-            if (tooltipRef.current.contains(event.target as Node)) return;
-            
-            // If clicking inside the epub viewer or pdf viewer, let the viewer handle its own selection clearing
-            // This prevents synthetic mousedown events on mobile from prematurely wiping the selection!
-            const target = event.target as Element;
-            if (target && (target.closest('.epub-viewer-container') || target.closest('.react-pdf__Page') || target.closest('iframe'))) {
-                return;
-            }
-
-            resetSelection();
-        }
-        document.addEventListener('pointerdown', handleClickOutside);
-        return () => document.removeEventListener('pointerdown', handleClickOutside);
-    }, [resetSelection]);
+    // Tooltip auto-closes when selection collapses in the respective viewers (handled by the viewer components)
 
     const handleCopy = async () => {
         if (!translationResult) return;

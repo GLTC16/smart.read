@@ -63,6 +63,7 @@ export default function EpubViewer() {
     const renditionRef = useRef<EpubRendition | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const isLargeBookRef = useRef(false);
+    const lastPageRef = useRef(currentPage);
 
     // scrolled-continuous is most compatible across epub types.
     const epubOptions = useMemo(() => ({
@@ -106,6 +107,24 @@ export default function EpubViewer() {
         }
     }, [zoomLevel, isReaderReady]);
 
+    // Navigate to page when user moves the slider
+    useEffect(() => {
+        if (isReaderReady && renditionRef.current && currentPage !== lastPageRef.current) {
+            lastPageRef.current = currentPage;
+            try {
+                const locations = renditionRef.current.locations;
+                if (locations && typeof locations.length === 'function' && locations.length() > 0) {
+                    const cfi = (locations as any).cfiFromLocation(currentPage - 1);
+                    if (cfi) {
+                        renditionRef.current.display(cfi);
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to navigate to page:", e);
+            }
+        }
+    }, [currentPage, isReaderReady]);
+
     const onLocationChanged = useCallback((loc: EpubLocation) => {
         setLocation(loc);
         if (typeof loc === "string") {
@@ -115,6 +134,7 @@ export default function EpubViewer() {
                     const current = renditionRef.current?.currentLocation();
                     if (current?.start) {
                         const page = renditionRef.current?.locations?.locationFromCfi(current.start.cfi) ?? 0;
+                        lastPageRef.current = page + 1; // Prevent feedback loop
                         setCurrentPage(page + 1);
                     }
                 }
@@ -228,13 +248,15 @@ export default function EpubViewer() {
         // 3. Bulletproof fallback: use epub.js native 'selected' event
         rendition.on('selected', (cfiRange: string, contents: any) => {
             try {
-                const range = rendition.getRange(cfiRange) as unknown as Range;
-                if (!range) return;
-                const text = range.toString().trim();
+                const win = contents.window;
+                const selection = win.getSelection();
+                if (!selection || selection.rangeCount === 0) return;
+                
+                const text = selection.toString().trim();
                 if (!text) return;
                 
+                const range = selection.getRangeAt(0);
                 const rect = range.getBoundingClientRect();
-                const win = contents.window;
                 
                 let iframe: HTMLIFrameElement | null = null;
                 try { iframe = win.frameElement as HTMLIFrameElement; } catch (e) {}
@@ -331,6 +353,11 @@ export default function EpubViewer() {
                 getRendition={handleRendition}
                 tocChanged={setToc}
                 epubOptions={epubOptions}
+                readerStyles={{
+                    container: { overflow: 'hidden', height: '100%', position: 'relative' },
+                    readerArea: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+                    footerArea: { display: 'none' } // Hides the built-in counter/slider
+                }}
             />
             <PageCounter current={currentPage} total={totalPages} />
         </div>
