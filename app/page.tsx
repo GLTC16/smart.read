@@ -3,12 +3,22 @@
 
 import { useStore } from "@/store/useStore";
 import Sidebar from "@/components/Sidebar";
-import BookViewer from "@/components/BookViewer";
 import BottomBar from "@/components/BottomBar";
 import TranslationTooltip from "@/components/TranslationTooltip";
 import translations, { detectBrowserLanguage } from "@/lib/translations";
-import { Upload, BookOpen, Zap, Globe, Shield } from "lucide-react";
+import { Upload, BookOpen, Zap, Globe, Shield, Loader2 } from "lucide-react";
 import { useState, useCallback, useEffect, useMemo } from "react";
+import dynamic from "next/dynamic";
+
+const BookViewer = dynamic(() => import("@/components/BookViewer"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex-1 flex flex-col items-center justify-center bg-[#0a0a19] text-white">
+      <Loader2 className="w-10 h-10 text-indigo-500 animate-spin mb-4" />
+      <p className="text-slate-400">Iniciando motor de lectura...</p>
+    </div>
+  ),
+});
 
 export default function Home() {
   const { currentFile, setFile, uiLanguage, setUiLanguage, setTargetLanguage } = useStore();

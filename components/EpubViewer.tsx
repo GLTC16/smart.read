@@ -88,8 +88,11 @@ export default function EpubViewer() {
         } else {
             setEpubData(currentFile as string);
         }
-        return () => { setIsReaderReady(false); };
-    }, [currentFile]);
+        return () => { 
+            setIsReaderReady(false);
+            setEpubRendition(null as any);
+        };
+    }, [currentFile, setEpubRendition]);
 
     // Dynamic zoom: update EPUB font size when zoomLevel changes
     useEffect(() => {

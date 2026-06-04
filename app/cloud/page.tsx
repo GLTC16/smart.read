@@ -57,6 +57,11 @@ export default function CloudLibraryPage() {
       return;
     }
 
+    if (file.size > 15 * 1024 * 1024) {
+      setError('El archivo es demasiado grande. El límite máximo es de 15 MB.');
+      return;
+    }
+
     setUploading(true);
     setError(null);
 
