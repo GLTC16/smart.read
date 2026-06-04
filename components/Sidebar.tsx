@@ -1,8 +1,9 @@
 'use client';
 
 import { useStore } from '@/store/useStore';
-import { BookOpen, X, LogOut } from 'lucide-react';
+import { BookOpen, X, LogOut, UserCircle } from 'lucide-react';
 import { useMemo } from 'react';
+import Link from 'next/link';
 import translations from '@/lib/translations';
 
 interface SidebarProps {
@@ -177,6 +178,20 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         <LogOut size={16} />
                         <span>{t.closeBook}</span>
                     </button>
+
+                    <Link
+                        href="/profile"
+                        className="w-full flex items-center gap-3 px-4 py-3 mt-3 rounded-xl text-sm font-semibold transition-all duration-150"
+                        style={{
+                            color: '#a5b4fc',
+                            background: 'rgba(99,102,241,0.08)',
+                            border: '1px solid rgba(99,102,241,0.15)',
+                        }}
+                    >
+                        <UserCircle size={16} />
+                        <span>Mi Perfil / Login</span>
+                    </Link>
+
                     <p
                         className="text-center text-xs mt-3"
                         style={{ color: 'var(--text-disabled)' }}
