@@ -2,7 +2,7 @@
 
 import { Document, Page, pdfjs } from 'react-pdf';
 import { useStore } from '@/store/useStore';
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import PageCounter from './PageCounter';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
@@ -67,14 +67,17 @@ function PDFSkeleton() {
 export default function PDFViewer() {
     const {
         currentFile, currentPage, totalPages,
-        setTotalPages, setSelectedText,
+        setCurrentPage, setTotalPages, setSelectedText,
         setSelectionPosition, resetSelection,
         zoomLevel,
     } = useStore();
     const containerRef = useRef<HTMLDivElement>(null);
+    const touchStartX = useRef<number | null>(null);
+    const touchStartY = useRef<number | null>(null);
     const isMobile = useIsMobile();
     const [baseWidth, setBaseWidth] = useState(800);
     const [isLoading, setIsLoading] = useState(true);
+    const [loadError, setLoadError] = useState<string | null>(null);
 
     const pageWidth = baseWidth * (zoomLevel / 100);
 
@@ -128,19 +131,51 @@ export default function PDFViewer() {
         return currentFile as string;
     }, [currentFile]);
 
+    // Reset loading state when file changes
+    useEffect(() => {
+        setIsLoading(true);
+        setLoadError(null);
+    }, [fileUrl]);
+
     function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
         // setIsLoading first to avoid Zustand useSyncExternalStore race
         setIsLoading(false);
         setTotalPages(numPages);
     }
 
+    function onDocumentLoadError(error: Error) {
+        console.error('PDF load error:', error);
+        setIsLoading(false);
+        setLoadError('No se pudo cargar el PDF. Verifica que el archivo no esté dañado.');
+    }
+
+    const handleTouchStart = useCallback((e: React.TouchEvent) => {
+        touchStartX.current = e.touches[0].clientX;
+        touchStartY.current = e.touches[0].clientY;
+    }, []);
+
+    const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+        if (touchStartX.current === null || touchStartY.current === null) return;
+        const dx = e.changedTouches[0].clientX - touchStartX.current;
+        const dy = e.changedTouches[0].clientY - touchStartY.current;
+        // Only trigger on clear horizontal swipe
+        if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
+            if (dx < 0) setCurrentPage(Math.min(totalPages, currentPage + 1));
+            else setCurrentPage(Math.max(1, currentPage - 1));
+        }
+        touchStartX.current = null;
+        touchStartY.current = null;
+    }, [currentPage, totalPages, setCurrentPage]);
+
     if (!fileUrl) return null;
 
     return (
         <div
             ref={containerRef}
-            className="flex justify-center min-h-screen pt-8 pb-32 overflow-auto relative"
-            style={{ background: 'var(--bg-surface)' }}
+            className="flex justify-center pt-8 pb-32 relative"
+            style={{ background: 'var(--bg-surface)', minHeight: '100%' }}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
         >
             {/* Skeleton overlaid on top while loading — Document always rendered */}
             {isLoading && (
@@ -148,20 +183,33 @@ export default function PDFViewer() {
                     <PDFSkeleton />
                 </div>
             )}
-            <Document
-                file={fileUrl}
-                onLoadSuccess={onDocumentLoadSuccess}
-                className="shadow-2xl"
-                loading={null}
-            >
-                <Page
-                    pageNumber={currentPage}
-                    width={pageWidth}
-                    renderTextLayer={true}
-                    renderAnnotationLayer={true}
-                    className="rounded-lg overflow-hidden"
-                />
-            </Document>
+            {loadError ? (
+                <div className="flex flex-col items-center justify-center gap-4 py-20 px-8 text-center">
+                    <div
+                        className="p-4 rounded-2xl"
+                        style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)' }}
+                    >
+                        <span className="text-3xl">⚠️</span>
+                    </div>
+                    <p className="text-sm font-medium" style={{ color: '#f87171' }}>{loadError}</p>
+                </div>
+            ) : (
+                <Document
+                    file={fileUrl}
+                    onLoadSuccess={onDocumentLoadSuccess}
+                    onLoadError={onDocumentLoadError}
+                    className="shadow-2xl"
+                    loading={null}
+                >
+                    <Page
+                        pageNumber={currentPage}
+                        width={pageWidth}
+                        renderTextLayer={true}
+                        renderAnnotationLayer={true}
+                        className="rounded-lg overflow-hidden"
+                    />
+                </Document>
+            )}
             <PageCounter current={currentPage} total={totalPages} type="page" />
         </div>
     );

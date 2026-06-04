@@ -74,9 +74,13 @@ export default function BookViewer() {
 
     if (!currentFile) return null;
 
+    // PDF needs overflow-visible so it can grow + scroll via parent container
+    // EPUB/TXT need overflow-hidden so their internal scroll works at fixed height
+    const overflowClass = fileType === 'pdf' ? 'overflow-visible' : 'overflow-hidden';
+
     return (
         <div
-            className="w-full h-full overflow-hidden rounded-xl"
+            className={`w-full ${fileType === 'pdf' ? '' : 'h-full'} ${overflowClass} rounded-xl`}
             style={{
                 background: 'var(--bg-surface)',
                 border: '1px solid var(--border)',
