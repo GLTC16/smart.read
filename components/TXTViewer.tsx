@@ -204,7 +204,7 @@ export default function TXTViewer() {
                         >
                             {visibleParagraphs.map((para, i) => (
                                 <p
-                                    key={`${txtPage}-${i}`}
+                                    key={`${currentPage}-${i}`}
                                     className="font-reading"
                                     style={{
                                         fontSize,
