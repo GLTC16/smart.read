@@ -1,16 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// Simple in-memory rate limiting for serverless instance defense
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+const RATE_LIMIT_MAX = 50; // 50 requests
+const RATE_LIMIT_WINDOW_MS = 60 * 1000; // per 1 minute
+
 export async function POST(request: NextRequest) {
     try {
+        // --- 1. RATE LIMITING ---
+        const ip = request.headers.get('x-forwarded-for') ?? 'anonymous';
+        const now = Date.now();
+        const userLimit = rateLimitMap.get(ip);
+        
+        if (userLimit && now < userLimit.resetTime) {
+            if (userLimit.count >= RATE_LIMIT_MAX) {
+                return NextResponse.json({ error: 'Too Many Requests (Rate Limit Exceeded)' }, { status: 429 });
+            }
+            userLimit.count++;
+        } else {
+            rateLimitMap.set(ip, { count: 1, resetTime: now + RATE_LIMIT_WINDOW_MS });
+        }
+        // Cleanup old entries randomly to avoid memory leak in long-lived instances
+        if (Math.random() < 0.1) {
+            rateLimitMap.forEach((val, key) => { if (now > val.resetTime) rateLimitMap.delete(key); });
+        }
+
+        // --- 2. INPUT VALIDATION ---
         const body = await request.json();
         const { text, targetLang } = body;
 
-        // 1. Validación más estricta
-        if (!text) {
-            return NextResponse.json({ error: 'El texto es obligatorio' }, { status: 400 });
+        if (!text || typeof text !== 'string') {
+            return NextResponse.json({ error: 'El texto es inválido o está vacío' }, { status: 400 });
         }
-        if (!targetLang) {
-            return NextResponse.json({ error: 'El idioma destino es obligatorio' }, { status: 400 });
+        if (text.length > 3000) {
+            return NextResponse.json({ error: 'Payload Too Large: El texto excede el límite seguro de 3000 caracteres' }, { status: 413 });
+        }
+        if (!targetLang || typeof targetLang !== 'string' || targetLang.length > 10) {
+            return NextResponse.json({ error: 'El idioma destino es inválido' }, { status: 400 });
         }
 
         // 2. IMPORTANTE: Añadir email para aumentar el límite gratuito (50,000 caracteres/día)
@@ -44,14 +70,15 @@ export async function POST(request: NextRequest) {
         if (data && data.responseData && data.responseData.translatedText) {
             return NextResponse.json({ 
                 translatedText: data.responseData.translatedText,
-                match: data.match // Opcional: devuelve la calidad de la coincidencia
+                match: data.match 
             });
         } else {
             return NextResponse.json({ error: 'No se pudo obtener la traducción' }, { status: 500 });
         }
 
     } catch (error) {
-        console.error('Error interno de traducción:', error);
-        return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
+        // Evitar fugar la pila de errores interna (Stack Trace) al cliente
+        console.error('Security/Translation Error:', error);
+        return NextResponse.json({ error: 'Error interno de procesamiento' }, { status: 500 });
     }
 }

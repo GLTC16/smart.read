@@ -36,6 +36,7 @@ export default function TranslationTooltip() {
 
     const tooltipRef = useRef<HTMLDivElement>(null);
     const [copied, setCopied] = useState(false);
+    const [isMoveMode, setIsMoveMode] = useState(false);
     
     // Drag state
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -47,6 +48,7 @@ export default function TranslationTooltip() {
     // Reset drag offset when selection changes
     useEffect(() => {
         setDragOffset({ x: 0, y: 0 });
+        setIsMoveMode(false);
     }, [selectionPosition]);
 
     // Fetch translation when text or language changes
@@ -95,6 +97,7 @@ export default function TranslationTooltip() {
     };
 
     const handlePointerDown = (e: React.PointerEvent) => {
+        if (!isMoveMode) return;
         isDragging.current = true;
         dragStart.current = { x: e.clientX - dragOffset.x, y: e.clientY - dragOffset.y };
         if (tooltipRef.current) tooltipRef.current.setPointerCapture(e.pointerId);
@@ -140,7 +143,7 @@ export default function TranslationTooltip() {
         <div
             id="translation-tooltip"
             ref={tooltipRef}
-            className="fixed z-[9999] flex flex-col overflow-hidden"
+            className={`fixed z-[9999] flex flex-col overflow-hidden ${isMoveMode ? 'shadow-[0_0_0_2px_rgba(99,102,241,0.5)]' : ''}`}
             style={{
                 width: `${TOOLTIP_WIDTH}px`,
                 left: finalX,
@@ -159,30 +162,32 @@ export default function TranslationTooltip() {
         >
             {/* Header */}
             <div
-                className="flex items-center justify-between px-4 py-3"
+                className={`flex items-center justify-between px-4 py-3 ${isMoveMode ? 'cursor-grab active:cursor-grabbing touch-none' : ''}`}
+                onPointerDown={isMoveMode ? handlePointerDown : undefined}
+                onPointerMove={isMoveMode ? handlePointerMove : undefined}
+                onPointerUp={isMoveMode ? handlePointerUp : undefined}
+                onPointerCancel={isMoveMode ? handlePointerUp : undefined}
                 style={{
-                    background: 'linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(20,184,166,0.08) 100%)',
+                    background: isMoveMode 
+                        ? 'linear-gradient(135deg, rgba(99,102,241,0.3) 0%, rgba(20,184,166,0.15) 100%)' 
+                        : 'linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(20,184,166,0.08) 100%)',
                     borderBottom: '1px solid rgba(255,255,255,0.05)',
                 }}
             >
                 <div className="flex items-center gap-2 flex-1">
                     <button
-                        className="flex items-center gap-1.5 px-2 py-1 rounded-md cursor-grab active:cursor-grabbing"
-                        onPointerDown={handlePointerDown}
-                        onPointerMove={handlePointerMove}
-                        onPointerUp={handlePointerUp}
-                        onPointerCancel={handlePointerUp}
+                        onClick={(e) => { e.stopPropagation(); setIsMoveMode(!isMoveMode); }}
+                        className={`flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors ${isMoveMode ? 'bg-indigo-500 text-white shadow-md' : 'text-indigo-300'}`}
                         style={{
-                            background: 'rgba(99,102,241,0.2)',
-                            border: '1px solid rgba(99,102,241,0.3)',
+                            background: isMoveMode ? 'var(--accent)' : 'rgba(99,102,241,0.2)',
+                            border: '1px solid',
+                            borderColor: isMoveMode ? 'transparent' : 'rgba(99,102,241,0.3)',
                             touchAction: 'none',
-                            userSelect: 'none',
-                            WebkitUserSelect: 'none',
                         }}
                     >
-                        <GripHorizontal size={14} style={{ color: 'var(--accent-hover)' }} />
-                        <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
-                            Reacomodar
+                        <GripHorizontal size={14} style={{ color: isMoveMode ? 'white' : 'var(--accent-hover)' }} />
+                        <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: isMoveMode ? 'white' : 'var(--text-secondary)' }}>
+                            {isMoveMode ? 'Mover...' : 'Reacomodar'}
                         </span>
                     </button>
                     
