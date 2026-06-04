@@ -58,6 +58,7 @@ export default function EpubViewer() {
     const [location, setLocation] = useState<EpubLocation>(currentLocation || 0);
     const [isReaderReady, setIsReaderReady] = useState(false);
     const renditionRef = useRef<EpubRendition | null>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
     const isLargeBookRef = useRef(false);
 
     // scrolled-continuous is most compatible across epub types.
@@ -152,41 +153,33 @@ export default function EpubViewer() {
                     try {
                         const epubContents = contents as unknown as EpubContents;
                         const selection = epubContents.window.getSelection();
-                        if (!selection || selection.rangeCount === 0) return;
+                        if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return;
                         
                         const text = selection.toString().trim();
                         if (text) {
                             const range = selection.getRangeAt(0);
                             const rect = range.getBoundingClientRect();
                             
-                            const container = document.querySelector('.epub-viewer-container');
-                            const frameElem = epubContents.window.frameElement as Element | null;
+                            // 1. Avoid Cross-Origin frameElement errors by getting the iframe from the parent DOM
+                            const iframe = containerRef.current?.querySelector('iframe');
+                            if (!iframe) return;
                             
-                            let offsetX = 0;
-                            let offsetY = 0;
-
-                            if (frameElem) {
-                                const frameRect = frameElem.getBoundingClientRect();
-                                offsetX = frameRect.left;
-                                offsetY = frameRect.top;
-                            } else if (container) {
-                                const containerRect = container.getBoundingClientRect();
-                                offsetX = containerRect.left;
-                                offsetY = containerRect.top;
-                            }
+                            const iframeRect = iframe.getBoundingClientRect();
 
                             setSelectedText(text);
                             setSelectionPosition({
-                                x: offsetX + rect.left + rect.width / 2,
-                                y: offsetY + rect.top,
+                                x: iframeRect.left + rect.left + rect.width / 2,
+                                y: iframeRect.top + rect.top,
                             });
                         }
                     } catch (e) { console.error("Manual epub selection error:", e); }
                 }, 50);
             };
 
-            doc.addEventListener('mouseup', handleSelection);
-            doc.addEventListener('touchend', handleSelection);
+            // 2. Bypass epub.js debouncing entirely to catch fleeting mobile selections
+            doc.addEventListener('mouseup', handleSelection, false);
+            doc.addEventListener('touchend', handleSelection, false);
+            doc.addEventListener('selectionchange', handleSelection, false);
         });
 
         if (currentLocation) {
@@ -214,42 +207,7 @@ export default function EpubViewer() {
             }).catch(() => {});
         }
 
-        // Text selection for translation — using safe container fallback
-        rendition.on("selected", (_cfiRange: string, contents: EpubContents) => {
-            try {
-                const selection = contents.window.getSelection();
-                if (!selection || selection.rangeCount === 0) return;
-                const text = selection.toString().trim();
-                if (text) {
-                    const range = selection.getRangeAt(0);
-                    const rect = range.getBoundingClientRect();
-                    
-                    // Always fallback to the container if frameElement is blocked or missing
-                    const container = document.querySelector(".epub-viewer-container");
-                    const frameElem = contents.window.frameElement as Element | null;
-                    
-                    let offsetX = 0;
-                    let offsetY = 0;
-
-                    if (frameElem) {
-                        const frameRect = frameElem.getBoundingClientRect();
-                        offsetX = frameRect.left;
-                        offsetY = frameRect.top;
-                    } else if (container) {
-                        const containerRect = container.getBoundingClientRect();
-                        offsetX = containerRect.left;
-                        offsetY = containerRect.top;
-                    }
-
-                    setSelectedText(text);
-                    setSelectionPosition({
-                        x: offsetX + rect.left + rect.width / 2,
-                        y: offsetY + rect.top,
-                    });
-                }
-            } catch (e) { console.error("Epub selection error:", e); }
-        });
-
+        // Generación de localizaciones omitida por brevedad
     }, [currentLocation, setTotalPages, setSelectedText, setSelectionPosition, setEpubRendition, zoomLevel]);
 
     if (!epubData) {
@@ -268,6 +226,7 @@ export default function EpubViewer() {
 
     return (
         <div
+            ref={containerRef}
             className="relative w-full h-full epub-viewer-container"
             style={{ minHeight: '500px', background: 'var(--bg-surface)' }}
         >
