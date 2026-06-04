@@ -2,7 +2,6 @@
 
 import { useStore } from '@/store/useStore';
 import { useEffect, useState, useRef, useMemo } from 'react';
-import PageCounter from './PageCounter';
 import translations from '@/lib/translations';
 
 // For very large TXT files, we limit rendered paragraphs and paginate
@@ -13,11 +12,11 @@ export default function TXTViewer() {
         currentFile, setSelectedText,
         setSelectionPosition, resetSelection,
         zoomLevel, uiLanguage,
+        currentPage, setCurrentPage, setTotalPages
     } = useStore();
     const [content, setContent] = useState<string>('');
     const [scrollProgress, setScrollProgress] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
-    const [txtPage, setTxtPage] = useState(0);
     const containerRef = useRef<HTMLDivElement>(null);
 
     const t = useMemo(() => translations[uiLanguage], [uiLanguage]);
@@ -26,7 +25,7 @@ export default function TXTViewer() {
     useEffect(() => {
         if (!currentFile) return;
         setIsLoading(true);
-        setTxtPage(0);
+        setCurrentPage(1);
         const loadContent = async () => {
             try {
                 let text = '';
@@ -95,13 +94,20 @@ export default function TXTViewer() {
     if (!currentFile) return null;
 
     // Parse paragraphs
-    const allParagraphs = content.split(/\n+/).filter(p => p.trim().length > 0);
-    const totalTxtPages = Math.ceil(allParagraphs.length / PARAGRAPHS_PER_PAGE);
+    const allParagraphs = useMemo(() => content.split(/\n+/).filter(p => p.trim().length > 0), [content]);
+    const totalTxtPages = Math.max(1, Math.ceil(allParagraphs.length / PARAGRAPHS_PER_PAGE));
     const isLargeFile = allParagraphs.length > PARAGRAPHS_PER_PAGE;
+
+    // Sync total pages with store
+    useEffect(() => {
+        if (!isLoading) {
+            setTotalPages(totalTxtPages);
+        }
+    }, [totalTxtPages, setTotalPages, isLoading]);
 
     // For large files, only render current page of paragraphs
     const visibleParagraphs = isLargeFile
-        ? allParagraphs.slice(txtPage * PARAGRAPHS_PER_PAGE, (txtPage + 1) * PARAGRAPHS_PER_PAGE)
+        ? allParagraphs.slice((currentPage - 1) * PARAGRAPHS_PER_PAGE, currentPage * PARAGRAPHS_PER_PAGE)
         : allParagraphs;
 
     const fontSize = `calc(1.125rem * ${zoomLevel} / 100)`;
@@ -158,8 +164,8 @@ export default function TXTViewer() {
                                 }}
                             >
                                 <button
-                                    onClick={() => { setTxtPage(Math.max(0, txtPage - 1)); containerRef.current?.scrollTo(0, 0); }}
-                                    disabled={txtPage === 0}
+                                    onClick={() => { setCurrentPage(Math.max(1, currentPage - 1)); containerRef.current?.scrollTo(0, 0); }}
+                                    disabled={currentPage <= 1}
                                     className="px-4 py-1.5 text-sm font-bold rounded-lg disabled:opacity-30 transition-all"
                                     style={{
                                         background: 'rgba(99,102,241,0.2)',
@@ -170,11 +176,11 @@ export default function TXTViewer() {
                                     ← {t.previousPage}
                                 </button>
                                 <span className="text-sm font-bold" style={{ color: 'var(--text-secondary)' }}>
-                                    {txtPage + 1} / {totalTxtPages}
+                                    {currentPage} / {totalTxtPages}
                                 </span>
                                 <button
-                                    onClick={() => { setTxtPage(Math.min(totalTxtPages - 1, txtPage + 1)); containerRef.current?.scrollTo(0, 0); }}
-                                    disabled={txtPage >= totalTxtPages - 1}
+                                    onClick={() => { setCurrentPage(Math.min(totalTxtPages, currentPage + 1)); containerRef.current?.scrollTo(0, 0); }}
+                                    disabled={currentPage >= totalTxtPages}
                                     className="px-4 py-1.5 text-sm font-bold rounded-lg disabled:opacity-30 transition-all"
                                     style={{
                                         background: 'rgba(99,102,241,0.2)',
@@ -224,8 +230,8 @@ export default function TXTViewer() {
                                 }}
                             >
                                 <button
-                                    onClick={() => { setTxtPage(Math.max(0, txtPage - 1)); containerRef.current?.scrollTo(0, 0); }}
-                                    disabled={txtPage === 0}
+                                    onClick={() => { setCurrentPage(Math.max(1, currentPage - 1)); containerRef.current?.scrollTo(0, 0); }}
+                                    disabled={currentPage <= 1}
                                     className="px-4 py-1.5 text-sm font-bold rounded-lg disabled:opacity-30 transition-all"
                                     style={{
                                         background: 'rgba(99,102,241,0.2)',
@@ -236,11 +242,11 @@ export default function TXTViewer() {
                                     ← {t.previousPage}
                                 </button>
                                 <span className="text-sm font-bold" style={{ color: 'var(--text-secondary)' }}>
-                                    {txtPage + 1} / {totalTxtPages}
+                                    {currentPage} / {totalTxtPages}
                                 </span>
                                 <button
-                                    onClick={() => { setTxtPage(Math.min(totalTxtPages - 1, txtPage + 1)); containerRef.current?.scrollTo(0, 0); }}
-                                    disabled={txtPage >= totalTxtPages - 1}
+                                    onClick={() => { setCurrentPage(Math.min(totalTxtPages, currentPage + 1)); containerRef.current?.scrollTo(0, 0); }}
+                                    disabled={currentPage >= totalTxtPages}
                                     className="px-4 py-1.5 text-sm font-bold rounded-lg disabled:opacity-30 transition-all"
                                     style={{
                                         background: 'rgba(99,102,241,0.2)',
@@ -255,7 +261,6 @@ export default function TXTViewer() {
                     </>
                 )}
             </div>
-            <PageCounter current={scrollProgress} total={100} type="percent" />
         </div>
     );
 }

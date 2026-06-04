@@ -11,7 +11,7 @@ interface BottomBarProps {
 
 export default function BottomBar({ toggleSidebar }: BottomBarProps) {
     const {
-        currentPage, setCurrentPage,
+        currentPage, setCurrentPage, totalPages,
         fileType, currentFile,
         epubRendition,
         zoomLevel, setZoomLevel,
@@ -30,6 +30,11 @@ export default function BottomBar({ toggleSidebar }: BottomBarProps) {
         if (fileType === 'pdf') setCurrentPage(currentPage + 1);
         if (fileType === 'epub') epubRendition?.next();
     }, [fileType, currentPage, setCurrentPage, epubRendition]);
+
+    const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = parseInt(e.target.value, 10);
+        setCurrentPage(value);
+    };
 
     // Zoom handlers
     const handleZoomOut = useCallback(() => {
@@ -120,21 +125,30 @@ export default function BottomBar({ toggleSidebar }: BottomBarProps) {
                     </button>
 
                     <div
-                        className="flex flex-col items-center select-none px-3"
-                        style={{ minWidth: '80px' }}
+                        className="flex flex-col items-center justify-center select-none px-4 group"
+                        style={{ minWidth: '160px' }}
                     >
-                        <span
-                            className="text-[10px] font-bold uppercase tracking-widest mb-0.5"
-                            style={{ color: 'var(--text-disabled)' }}
-                        >
-                            {fileType === 'pdf' ? t.page : t.reading}
-                        </span>
-                        <span
-                            className="text-lg font-bold leading-none font-reading"
-                            style={{ color: 'var(--text-primary)' }}
-                        >
-                            {fileType === 'pdf' ? currentPage : '—'}
-                        </span>
+                        <div className="flex items-center justify-between w-full mb-1">
+                            <span className="text-[9px] font-bold uppercase tracking-widest text-indigo-400">
+                                {fileType === 'pdf' ? t.page : t.reading}
+                            </span>
+                            <span className="text-xs font-bold font-reading text-white">
+                                {currentPage} <span className="text-white/40">/ {totalPages || '—'}</span>
+                            </span>
+                        </div>
+                        <input
+                            type="range"
+                            min={1}
+                            max={totalPages || 100}
+                            value={currentPage}
+                            onChange={handleSliderChange}
+                            disabled={!totalPages || totalPages <= 1}
+                            className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer hover:bg-indigo-500/40 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                            style={{
+                                accentColor: '#818cf8',
+                            }}
+                            title={`Página ${currentPage} de ${totalPages}`}
+                        />
                     </div>
 
                     <button

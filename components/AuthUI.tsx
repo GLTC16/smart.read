@@ -11,7 +11,7 @@ export default function AuthUI() {
   const [devSecret, setDevSecret] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [mode, setMode] = useState<'login' | 'register' | 'recovery' | 'dev'>('login');
+  const [mode, setMode] = useState<'login' | 'register' | 'recovery'>('login');
   const [message, setMessage] = useState<string | null>(null);
 
   const supabase = createClient();
@@ -56,26 +56,6 @@ export default function AuthUI() {
     }
   };
 
-  const handleDevBypass = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch('/api/auth/dev-bypass', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ secret: devSecret })
-      });
-      if (!res.ok) throw new Error('Credenciales inválidas');
-      router.push('/');
-      router.refresh();
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleGoogleAuth = async () => {
     setLoading(true);
     try {
@@ -97,7 +77,7 @@ export default function AuthUI() {
       <div className="text-center mb-8">
         <ShieldCheck className="w-12 h-12 text-purple-400 mx-auto mb-4" />
         <h2 className="text-2xl font-bold text-white tracking-tight">
-          {mode === 'login' ? 'Iniciar Sesión' : mode === 'register' ? 'Crear Cuenta' : mode === 'recovery' ? 'Recuperar Acceso' : 'Acceso de Desarrollador'}
+          {mode === 'login' ? 'Iniciar Sesión' : mode === 'register' ? 'Crear Cuenta' : 'Recuperar Acceso'}
         </h2>
         <p className="text-slate-400 text-sm mt-2">
           Sistema cifrado con seguridad de grado corporativo
@@ -142,28 +122,6 @@ export default function AuthUI() {
         </div>
       )}
 
-      {mode === 'dev' ? (
-        <form onSubmit={handleDevBypass} className="space-y-4">
-          <div className="relative">
-            <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-            <input
-              type="password"
-              placeholder="Clave Maestra Secreta"
-              value={devSecret}
-              onChange={(e) => setDevSecret(e.target.value)}
-              className="w-full bg-black/20 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all"
-              required
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-red-600 to-orange-600 text-white font-medium hover:from-red-500 hover:to-orange-500 focus:ring-2 focus:ring-red-500/50 transition-all flex items-center justify-center disabled:opacity-50"
-          >
-            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Bypass Activo'}
-          </button>
-        </form>
-      ) : (
         <form onSubmit={handleEmailAuth} className="space-y-4">
           <div className="relative">
             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -201,9 +159,8 @@ export default function AuthUI() {
             )}
           </button>
         </form>
-      )}
 
-      {mode !== 'dev' && mode !== 'recovery' && (
+      {mode !== 'recovery' && (
         <>
           <div className="flex items-center gap-4 my-6 opacity-30">
             <div className="flex-1 h-px bg-white"></div>
@@ -231,11 +188,6 @@ export default function AuthUI() {
         {mode === 'login' && (
           <button onClick={() => { setMode('recovery'); setError(null); }} className="text-slate-400 hover:text-white transition-colors">
             Olvidé mi contraseña
-          </button>
-        )}
-        {mode !== 'dev' && (
-          <button onClick={() => { setMode('dev'); setError(null); }} className="text-red-400/50 hover:text-red-400 transition-colors pt-4 text-xs">
-            Admin / Dev Bypass
           </button>
         )}
       </div>

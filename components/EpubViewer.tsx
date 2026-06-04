@@ -5,7 +5,6 @@ import { ReactReader } from "react-reader";
 import { useStore } from "@/store/useStore";
 import { Loader2 } from "lucide-react";
 import translations from "@/lib/translations";
-import PageCounter from "./PageCounter";
 
 type EpubLocation = string | number;
 type EpubRendition = {
@@ -356,10 +355,11 @@ export default function EpubViewer() {
                 readerStyles={{
                     container: { overflow: 'hidden', height: '100%', position: 'relative' },
                     readerArea: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
-                    footerArea: { display: 'none' } // Hides the built-in counter/slider
+                    // @ts-expect-error - Hides the built-in counter/slider even if not explicitly typed
+                    footerArea: { display: 'none' },
+                    tocAreaButton: { display: 'none' }
                 }}
             />
-            <PageCounter current={currentPage} total={totalPages} />
         </div>
     );
 }

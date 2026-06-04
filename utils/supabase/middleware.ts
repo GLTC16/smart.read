@@ -34,22 +34,18 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Dev bypass logic: if token is present, we skip strict auth requirements
-  const devBypassToken = request.cookies.get('DEV_BYPASS_TOKEN')?.value
-  const isDevBypassed = devBypassToken === process.env.DEV_BYPASS_SECRET
-
   const isAuthRoute = request.nextUrl.pathname.startsWith('/login') || request.nextUrl.pathname.startsWith('/register')
   const isProtectedRoute = request.nextUrl.pathname.startsWith('/profile') || request.nextUrl.pathname.startsWith('/files')
 
-  if (isProtectedRoute && !user && !isDevBypassed) {
-    // If not logged in and not bypassed, redirect to login
+  if (isProtectedRoute && !user) {
+    // If not logged in, redirect to login
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 
   // If user is logged in, redirect them away from auth pages
-  if (isAuthRoute && (user || isDevBypassed)) {
+  if (isAuthRoute && user) {
     const url = request.nextUrl.clone()
     url.pathname = '/'
     return NextResponse.redirect(url)

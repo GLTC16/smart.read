@@ -42,6 +42,8 @@ export default function ProfilePage() {
   };
 
   const handleLogout = async () => {
+    const confirm = window.confirm('¿Estás seguro de que deseas cerrar sesión?');
+    if (!confirm) return;
     await supabase.auth.signOut();
     router.push('/');
   };

@@ -40,8 +40,7 @@ export async function POST(request: NextRequest) {
         }
 
         // 2. IMPORTANTE: Añadir email para aumentar el límite gratuito (50,000 caracteres/día)
-        // Puedes usar tu email real o uno genérico válido.
-        const email = 'tornaghi.gl@gmail.com'; 
+        const email = process.env.TRANSLATION_API_EMAIL || 'support@smartread.com'; 
 
         const langPair = `Autodetect|${targetLang}`;
         

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Lora } from "next/font/google";
 import Script from "next/script";
+import { cookies } from "next/headers";
 import GDPRBanner from "@/components/GDPRBanner";
 import Navbar from "@/components/Navbar";
 import "./globals.css";
@@ -49,24 +50,29 @@ export const viewport: Viewport = {
   userScalable: false,
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   const adsenseId = process.env.NEXT_PUBLIC_ADSENSE_ID || "pub-XXXXXXXXXXXXXX";
+  const cookieStore = await cookies();
+  const consent = cookieStore.get("gdpr_consent")?.value;
+  const hasAdsConsent = consent === "accepted";
 
   return (
     <html lang="es" className={`${inter.variable} ${lora.variable}`}>
       <body className={`${inter.className} antialiased`}>
         <Navbar />
         {children}
-        <Script
-          async
-          src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseId}`}
-          crossOrigin="anonymous"
-          strategy="afterInteractive"
-        />
+        {hasAdsConsent && (
+          <Script
+            async
+            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseId}`}
+            crossOrigin="anonymous"
+            strategy="afterInteractive"
+          />
+        )}
         <GDPRBanner />
       </body>
     </html>

@@ -4,7 +4,6 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import { useStore } from '@/store/useStore';
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useIsMobile } from '@/hooks/useIsMobile';
-import PageCounter from './PageCounter';
 import translations from '@/lib/translations';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
@@ -125,12 +124,31 @@ export default function PDFViewer() {
         };
     }, [setSelectedText, setSelectionPosition, resetSelection]);
 
-    // MUST be memoized — URL.createObjectURL returns new URL each call,
-    // causing react-pdf to see a new file prop every render → infinite reload loop
-    const fileUrl = useMemo(() => {
-        if (!currentFile) return null;
-        if (currentFile instanceof File) return URL.createObjectURL(currentFile);
-        return currentFile as string;
+    const [fileUrl, setFileUrl] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!currentFile) {
+            setFileUrl(null);
+            return;
+        }
+        
+        let url: string;
+        let isObjectUrl = false;
+
+        if (currentFile instanceof File) {
+            url = URL.createObjectURL(currentFile);
+            isObjectUrl = true;
+        } else {
+            url = currentFile as string;
+        }
+
+        setFileUrl(url);
+
+        return () => {
+            if (isObjectUrl) {
+                URL.revokeObjectURL(url);
+            }
+        };
     }, [currentFile]);
 
     // Reset loading state when file changes
@@ -227,7 +245,6 @@ export default function PDFViewer() {
                         />
                     </Document>
                 )}
-                <PageCounter current={currentPage} total={totalPages} type="page" />
             </div>
         </div>
     );
