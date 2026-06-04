@@ -158,6 +158,13 @@ export default function PDFViewer() {
 
     const handleTouchEnd = useCallback((e: React.TouchEvent) => {
         if (touchStartX.current === null || touchStartY.current === null) return;
+        
+        // Prevent page turn if user is selecting text
+        const selection = window.getSelection();
+        if (selection && !selection.isCollapsed && selection.toString().trim().length > 0) {
+            return;
+        }
+
         const dx = e.changedTouches[0].clientX - touchStartX.current;
         const dy = e.changedTouches[0].clientY - touchStartY.current;
         // Only trigger on clear horizontal swipe

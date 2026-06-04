@@ -319,7 +319,7 @@ export default function Home() {
                   <input
                     id="file-upload"
                     type="file"
-                    accept=".pdf,.epub,.txt"
+                    accept=".pdf,.epub,.txt,application/pdf,application/epub+zip,text/plain"
                     className="hidden"
                     onChange={handleFileUpload}
                   />

@@ -185,6 +185,32 @@ export default function EpubViewer() {
             doc.addEventListener('selectionchange', handleSelection, false);
         });
 
+        // 3. Bulletproof fallback: use epub.js native 'selected' event
+        rendition.on('selected', (cfiRange: string, contents: any) => {
+            try {
+                rendition.getRange(cfiRange).then((range: Range) => {
+                    if (!range) return;
+                    const text = range.toString().trim();
+                    if (!text) return;
+                    
+                    const rect = range.getBoundingClientRect();
+                    const iframe = containerRef.current?.querySelector('iframe');
+                    const iframeRect = iframe ? iframe.getBoundingClientRect() : { left: 0, top: 0 };
+                    
+                    setSelectedText(text);
+                    setSelectionPosition({
+                        x: iframeRect.left + rect.left + rect.width / 2,
+                        y: iframeRect.top + rect.top,
+                    });
+                    
+                    // Clear native selection so it doesn't get stuck
+                    contents.window.getSelection().removeAllRanges();
+                }).catch(() => {});
+            } catch (e) {
+                console.error("Native epub selection error:", e);
+            }
+        });
+
         if (currentLocation) {
             try { rendition.display(currentLocation); } catch { /* silent */ }
         }
