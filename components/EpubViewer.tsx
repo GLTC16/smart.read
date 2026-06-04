@@ -96,6 +96,10 @@ export default function EpubViewer() {
             isObjectUrl = true;
         } else {
             url = currentFile as string;
+            // Force cache reset for cloud URLs if it doesn't already have query params
+            if (url.startsWith('http') && !url.includes('?')) {
+                url += `?t=${Date.now()}`;
+            }
         }
         
         setEpubData(url);
@@ -366,12 +370,15 @@ export default function EpubViewer() {
                 epubOptions={epubOptions}
                 readerStyles={{
                     container: { overflow: 'hidden', height: '100%', position: 'relative' },
-                    readerArea: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
-                    // @ts-expect-error - Hides the built-in counter/slider even if not explicitly typed
-                    footerArea: { display: 'none' },
-                    tocAreaButton: { display: 'none' }
+                    readerArea: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }
                 }}
             />
+            {/* CSS to hide the built-in React Reader footer since the prop crashes it */}
+            <style jsx global>{`
+                .react-reader-footer, button[title="Close table of content"], button[title="Table of content"] {
+                    display: none !important;
+                }
+            `}</style>
         </div>
     );
 }
