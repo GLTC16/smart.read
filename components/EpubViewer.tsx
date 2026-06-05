@@ -110,11 +110,12 @@ export default function EpubViewer() {
 
     // paginated = one section at a time, reliable prev/next nav.
     // scrolled-continuous caused scroll-lock on mobile (overflow:hidden conflict).
+    // Do NOT pass width/height here — react-reader measures the container itself
+    // and passing "100%" conflicts with that measurement in paginated mode.
     const epubOptions = useMemo(() => ({
         flow: "paginated",
-        width: "100%",
-        height: "100%",
         spread: "none",
+        manager: "default",
     }), []);
 
     // ── Build epubData ────────────────────────────────────────────────────────
@@ -196,13 +197,16 @@ export default function EpubViewer() {
     }, [setCurrentLocation, setCurrentPage]);
 
     // ── Rendition setup ───────────────────────────────────────────────────────
+    // NOTE: zoomLevel intentionally NOT in deps — handled by separate useEffect.
+    // Including it here would create new fn ref on every zoom → ReactReader re-init.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handleRendition = useCallback((rendition: any) => {
         renditionRef.current = rendition as EpubRendition;
         setEpubRendition(rendition as unknown as import('@/store/useStore').Rendition);
         setIsReaderReady(true);
 
-        try { rendition.themes.fontSize(`${zoomLevel}%`); } catch { /* silent */ }
+        // Apply initial font size from current store value (read once, no dep)
+        try { rendition.themes.fontSize(`${useStore.getState().zoomLevel}%`); } catch { /* silent */ }
 
         // Dark theme via epubjs themes API (proper way — handles internal cascade)
         try {
@@ -443,7 +447,8 @@ export default function EpubViewer() {
                 })
                 .catch(() => { /* optional */ });
         }
-    }, [currentLocation, setTotalPages, setSelectedText, setSelectionPosition, setEpubRendition, zoomLevel]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentLocation, setTotalPages, setSelectedText, setSelectionPosition, setEpubRendition]);
 
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -464,8 +469,8 @@ export default function EpubViewer() {
     return (
         <div
             ref={containerRef}
-            className="relative w-full h-full epub-viewer-container"
-            style={{ minHeight: '500px', background: 'var(--bg-surface)' }}
+            className="relative w-full epub-viewer-container"
+            style={{ height: '100%', minHeight: '500px', background: '#0f0f1c' }}
         >
             {/* Top reader bar: title + progress */}
             <ReaderTopBar />
@@ -496,15 +501,23 @@ export default function EpubViewer() {
                 // @ts-expect-error - partial styles OK at runtime
                 readerStyles={{
                     container: {
-                        height: '100%',
-                        position: 'relative',
+                        // Keep default react-reader layout (relative + overflow:hidden + height:100%)
+                        // Only override the background color.
                         overflow: 'hidden',
+                        position: 'relative',
+                        height: '100%',
                         background: '#0f0f1c',
                     },
                     readerArea: {
-                        position: 'absolute',
-                        top: 0, left: 0, right: 0, bottom: 0,
-                        background: '#0f0f1c',  // Override react-reader white default
+                        // CRITICAL: must stay position:relative (not absolute!) so that
+                        // the inner epubjs render container div gets proper height for
+                        // paginated mode page-dimension measurement.
+                        position: 'relative',
+                        zIndex: 1,
+                        height: '100%',
+                        width: '100%',
+                        background: '#0f0f1c',
+                        transition: 'all .3s ease',
                     },
                 }}
             />
