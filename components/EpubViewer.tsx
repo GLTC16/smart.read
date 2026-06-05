@@ -108,44 +108,27 @@ export default function EpubViewer() {
     const isLargeBookRef = useRef(false);
     const lastPageRef = useRef(currentPage);
 
-    // ── Measure container ONCE for epubjs initial dimensions ─────────────────
-    // react-reader's EpubView sub-component inserts an unstyled root div (h=0)
-    // between our container and readerArea → height:100% resolves to 0 → iframe 0px.
-    // Fix: pass explicit px to epubOptions so epubjs sets iframe size in renderTo().
-    //
-    // CRITICAL: epubOptions MUST be stable after first init. If it changes while
-    // react-reader is still loading, it loops and never finishes (no iframe).
-    // So: capture dimensions ONCE (initSizeSet ref gates further updates).
-    // Window resize → call rendition.resize() directly (no state → no re-init).
-    const [initSize, setInitSize] = useState({ w: 0, h: 0 });
-    const initSizeSet = useRef(false);
-
+    // ── Window resize handler ─────────────────────────────────────────────────
+    // react-reader hardcodes width:"100%" height:"100%" in renderTo(), so epubOptions
+    // width/height are ignored by epubjs. Iframe height is fixed via CSS (see style
+    // block at bottom). Window resize still needs rendition.resize() for page layout.
     useLayoutEffect(() => {
         if (!containerRef.current) return;
         const ro = new ResizeObserver((entries) => {
             const { width, height } = entries[0].contentRect;
-            if (width <= 0 || height <= 0) return;
-            if (!initSizeSet.current) {
-                initSizeSet.current = true;
-                setInitSize({ w: Math.floor(width), h: Math.floor(height) });
-            } else if (renditionRef.current) {
-                // Window resize: imperative resize, no state update → no re-init
-                try { (renditionRef.current as any).resize(Math.floor(width), Math.floor(height)); } catch { /* silent */ }
-            }
+            if (width <= 0 || height <= 0 || !renditionRef.current) return;
+            try { (renditionRef.current as any).resize(Math.floor(width), Math.floor(height)); } catch { /* silent */ }
         });
         ro.observe(containerRef.current);
         return () => ro.disconnect();
     }, []);
 
     // paginated = one section at a time, reliable prev/next nav.
-    // initSize changes exactly once (0→real dims) → epubOptions changes once → one clean init.
     const epubOptions = useMemo(() => ({
         flow: "paginated",
         spread: "none",
         manager: "default",
-        width: initSize.w || undefined,
-        height: initSize.h || undefined,
-    }), [initSize]);
+    }), []);
 
     // ── Build epubData ────────────────────────────────────────────────────────
     // ROOT FIX: blob URLs have no .epub extension in their path component
@@ -513,9 +496,8 @@ export default function EpubViewer() {
                 </div>
             )}
 
-            {/* Render ReactReader only when: file is ready AND container is measured.
-                epubjs receives real px dimensions in renderTo() from the start. */}
-            {epubData && initSize.w > 0 && initSize.h > 0 && <ReactReader
+            {/* Render ReactReader only when file data is ready. */}
+            {epubData && <ReactReader
                 url={epubData}
                 location={location}
                 locationChanged={onLocationChanged}
@@ -541,8 +523,30 @@ export default function EpubViewer() {
                 }}
             />}
 
-            {/* Hide ReactReader's default navigation chrome */}
+            {/* Fix epubjs iframe height.
+                react-reader hardcodes width:"100%" height:"100%" in renderTo(),
+                so our epubOptions width/height are ignored. epubjs then sets
+                epub-container to height:100% which resolves to 0 (unstyled
+                EpubView root div parent has height:auto). Fix: make the
+                epub-container absolutely positioned so it stretches to the
+                nearest positioned ancestor (SwipeWrapper or readerArea). */}
             <style jsx global>{`
+                .epub-viewer-container .epub-container {
+                    position: absolute !important;
+                    top: 0 !important;
+                    left: 0 !important;
+                    right: 0 !important;
+                    bottom: 0 !important;
+                    height: auto !important;
+                }
+                .epub-viewer-container .epub-view {
+                    height: 100% !important;
+                    width: 100% !important;
+                }
+                .epub-viewer-container iframe {
+                    height: 100% !important;
+                    width: 100% !important;
+                }
                 .react-reader-footer,
                 button[title="Close table of content"],
                 button[title="Table of content"] {
