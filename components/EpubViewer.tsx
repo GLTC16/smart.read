@@ -457,10 +457,13 @@ export default function EpubViewer() {
             if (h <= 0) return;
             const iframe = container.querySelector('iframe') as HTMLIFrameElement | null;
             if (!iframe) return;
-            iframe.style.height = h + 'px';
-            if (iframe.parentElement) iframe.parentElement.style.height = h + 'px';
-            if (iframe.parentElement?.parentElement) {
-                iframe.parentElement.parentElement.style.height = h + 'px';
+            // Use 'important' flag so this beats any CSS !important rules
+            iframe.style.setProperty('height', h + 'px', 'important');
+            if (iframe.parentElement) {
+                iframe.parentElement.style.setProperty('height', h + 'px', 'important');
+                if (iframe.parentElement.parentElement) {
+                    iframe.parentElement.parentElement.style.setProperty('height', h + 'px', 'important');
+                }
             }
         };
         rendition.on('rendered', fixIframeHeight);
@@ -545,28 +548,15 @@ export default function EpubViewer() {
                 }}
             />}
 
-            {/* Fix epubjs iframe height.
-                react-reader hardcodes width:"100%" height:"100%" in renderTo(),
-                so our epubOptions width/height are ignored. epubjs then sets
-                epub-container to height:100% which resolves to 0 (unstyled
-                EpubView root div parent has height:auto). Fix: make the
-                epub-container absolutely positioned so it stretches to the
-                nearest positioned ancestor (SwipeWrapper or readerArea). */}
+            {/* NO height !important rules here — they fight against the JS fix
+                in rendition.on('rendered') which sets iframe heights imperatively.
+                CSS !important beats inline styles, so height: X !important would
+                override our JS-set height: 692px inline → stays 0px. */}
             <style jsx global>{`
-                .epub-viewer-container .epub-container {
-                    position: absolute !important;
-                    top: 0 !important;
-                    left: 0 !important;
-                    right: 0 !important;
-                    bottom: 0 !important;
-                    height: auto !important;
-                }
                 .epub-viewer-container .epub-view {
-                    height: 100% !important;
                     width: 100% !important;
                 }
                 .epub-viewer-container iframe {
-                    height: 100% !important;
                     width: 100% !important;
                 }
                 .react-reader-footer,
