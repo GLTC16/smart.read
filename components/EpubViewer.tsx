@@ -243,26 +243,7 @@ export default function EpubViewer() {
             const win = contents.window;
             if (!doc || !win) return;
 
-            // ── Force iframe height (epubjs sets 0px inline due to 0px parent) ─
-            // SwipeWrapper (nearest positioned ancestor) has h=auto→0 so
-            // epub-container/epub-view/iframe all collapse to 0px.
-            // Fix: measure the outer container (693px) and force it on iframe+parents.
-            // requestAnimationFrame ensures this runs AFTER epubjs's own layout pass.
-            const iframe = findIframe(win, containerRef.current);
-            if (iframe) {
-                requestAnimationFrame(() => {
-                    const h = containerRef.current?.getBoundingClientRect().height ?? 0;
-                    if (h > 0 && parseInt(iframe.style.height) <= 0) {
-                        iframe.style.setProperty('height', h + 'px', 'important');
-                        if (iframe.parentElement) {
-                            iframe.parentElement.style.setProperty('height', h + 'px', 'important');
-                            if (iframe.parentElement.parentElement) {
-                                iframe.parentElement.parentElement.style.setProperty('height', h + 'px', 'important');
-                            }
-                        }
-                    }
-                });
-            }
+            // Height fix is handled via rendition.on('rendered') below — not here.
 
             // Backup CSS injection (reinforces themes.default above)
             const style = doc.createElement('style');
@@ -463,6 +444,26 @@ export default function EpubViewer() {
                 console.error("Native epub selected error:", e);
             }
         });
+
+        // ── 'rendered' event: force iframe height AFTER epubjs layout ────────
+        // epubjs measures the epub-container (h=0 due to broken CSS chain) and
+        // sets iframe.style.height = '0px'. The 'rendered' event fires AFTER all
+        // epubjs layout calculations, so setting heights here won't get reset.
+        // We force heights on iframe, epub-view, and epub-container.
+        const fixIframeHeight = () => {
+            const container = containerRef.current;
+            if (!container) return;
+            const h = container.getBoundingClientRect().height;
+            if (h <= 0) return;
+            const iframe = container.querySelector('iframe') as HTMLIFrameElement | null;
+            if (!iframe) return;
+            iframe.style.height = h + 'px';
+            if (iframe.parentElement) iframe.parentElement.style.height = h + 'px';
+            if (iframe.parentElement?.parentElement) {
+                iframe.parentElement.parentElement.style.height = h + 'px';
+            }
+        };
+        rendition.on('rendered', fixIframeHeight);
 
         if (currentLocation) {
             try { rendition.display(currentLocation); } catch { /* silent */ }
