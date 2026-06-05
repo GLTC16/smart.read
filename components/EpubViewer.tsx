@@ -480,20 +480,11 @@ export default function EpubViewer() {
     }, [currentLocation, setTotalPages, setSelectedText, setSelectionPosition, setEpubRendition]);
 
     // ─────────────────────────────────────────────────────────────────────────
-
-    if (!epubData) {
-        return (
-            <div
-                className="flex flex-col items-center justify-center h-full gap-4"
-                style={{ background: 'var(--bg-surface)', minHeight: '400px' }}
-            >
-                <div className="p-4 rounded-2xl" style={{ background: 'rgba(20,184,166,0.1)', border: '1px solid rgba(20,184,166,0.2)' }}>
-                    <Loader2 className="w-8 h-8 animate-spin" style={{ color: 'var(--teal)' }} />
-                </div>
-                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{t.readingFile}</p>
-            </div>
-        );
-    }
+    // IMPORTANT: do NOT early-return before the container div is rendered.
+    // useLayoutEffect (deps=[]) fires only on first mount. If the container div
+    // isn't rendered on first mount (e.g., epubData is null), ResizeObserver
+    // is never attached → initSize stays 0 → ReactReader never mounts → ∞ spinner.
+    // Instead, ALWAYS render the container div and show loading states inside it.
 
     return (
         <div
@@ -504,11 +495,11 @@ export default function EpubViewer() {
             {/* Top reader bar: title + progress */}
             <ReaderTopBar />
 
-            {/* Loading overlay */}
-            {!isReaderReady && (
+            {/* Loading overlay: shows while reading file or while epub is initializing */}
+            {(!epubData || !isReaderReady) && (
                 <div
                     className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4"
-                    style={{ background: 'var(--bg-surface)' }}
+                    style={{ background: '#0f0f1c' }}
                 >
                     <div
                         className="p-4 rounded-2xl"
@@ -516,14 +507,15 @@ export default function EpubViewer() {
                     >
                         <Loader2 className="w-8 h-8 animate-spin" style={{ color: 'var(--teal)' }} />
                     </div>
-                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{t.loadingEpub}</p>
+                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                        {!epubData ? t.readingFile : t.loadingEpub}
+                    </p>
                 </div>
             )}
 
-            {/* Only render ReactReader once container dimensions are known.
-                This ensures epubjs receives real px values in renderTo()
-                instead of initializing with 0-height and needing a resize. */}
-            {initSize.w > 0 && initSize.h > 0 && <ReactReader
+            {/* Render ReactReader only when: file is ready AND container is measured.
+                epubjs receives real px dimensions in renderTo() from the start. */}
+            {epubData && initSize.w > 0 && initSize.h > 0 && <ReactReader
                 url={epubData}
                 location={location}
                 locationChanged={onLocationChanged}
