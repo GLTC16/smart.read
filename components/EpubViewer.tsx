@@ -243,6 +243,27 @@ export default function EpubViewer() {
             const win = contents.window;
             if (!doc || !win) return;
 
+            // ── Force iframe height (epubjs sets 0px inline due to 0px parent) ─
+            // SwipeWrapper (nearest positioned ancestor) has h=auto→0 so
+            // epub-container/epub-view/iframe all collapse to 0px.
+            // Fix: measure the outer container (693px) and force it on iframe+parents.
+            // requestAnimationFrame ensures this runs AFTER epubjs's own layout pass.
+            const iframe = findIframe(win, containerRef.current);
+            if (iframe) {
+                requestAnimationFrame(() => {
+                    const h = containerRef.current?.getBoundingClientRect().height ?? 0;
+                    if (h > 0 && parseInt(iframe.style.height) <= 0) {
+                        iframe.style.setProperty('height', h + 'px', 'important');
+                        if (iframe.parentElement) {
+                            iframe.parentElement.style.setProperty('height', h + 'px', 'important');
+                            if (iframe.parentElement.parentElement) {
+                                iframe.parentElement.parentElement.style.setProperty('height', h + 'px', 'important');
+                            }
+                        }
+                    }
+                });
+            }
+
             // Backup CSS injection (reinforces themes.default above)
             const style = doc.createElement('style');
             style.textContent = `
