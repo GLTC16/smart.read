@@ -4,6 +4,24 @@ import type { UILanguage } from '@/lib/translations';
 export type FileType = 'epub' | 'pdf' | 'txt';
 export type Language = 'it' | 'es' | 'en' | 'fr' | 'de' | 'pt' | 'ja' | 'zh';
 
+export interface TranslationEntry {
+    id: string;
+    originalText: string;
+    translatedText: string;
+    targetLanguage: Language;
+    timestamp: number;
+}
+
+export interface HighlightEntry {
+    id: string;
+    originalText: string;
+    translatedText: string | null;
+    targetLanguage: Language;
+    fileName: string;
+    fileType: FileType | null;
+    timestamp: number;
+}
+
 export interface TOCItem {
     id: string;
     label: string;
@@ -69,6 +87,20 @@ export interface SmartReadStore {
     // UI Language (i18n)
     uiLanguage: UILanguage;
     setUiLanguage: (lang: UILanguage) => void;
+
+    // Translation History (session + localStorage)
+    translationHistory: TranslationEntry[];
+    addToHistory: (entry: Omit<TranslationEntry, 'id' | 'timestamp'>) => void;
+    clearHistory: () => void;
+
+    // Highlights / Bookmarks
+    highlights: HighlightEntry[];
+    addHighlight: (entry: Omit<HighlightEntry, 'id' | 'timestamp'>) => void;
+    removeHighlight: (id: string) => void;
+
+    // Bilingual Mode
+    isBilingualMode: boolean;
+    setBilingualMode: (v: boolean) => void;
 }
 
 export const useStore = create<SmartReadStore>((set) => ({
@@ -137,4 +169,51 @@ export const useStore = create<SmartReadStore>((set) => ({
     // UI Language — default 'en', will be overridden client-side by browser detection
     uiLanguage: 'en',
     setUiLanguage: (lang) => set({ uiLanguage: lang }),
+
+    // Translation History
+    translationHistory: [],
+    addToHistory: (entry) => set((state) => {
+        const newEntry: TranslationEntry = {
+            ...entry,
+            id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            timestamp: Date.now(),
+        };
+        // Keep last 200 entries, deduplicate consecutive identical text
+        const prev = state.translationHistory;
+        if (prev.length > 0 && prev[0].originalText === entry.originalText) return {};
+        const updated = [newEntry, ...prev].slice(0, 200);
+        try { localStorage.setItem('sr_history', JSON.stringify(updated)); } catch { /* quota */ }
+        return { translationHistory: updated };
+    }),
+    clearHistory: () => {
+        try { localStorage.removeItem('sr_history'); } catch { /* noop */ }
+        set({ translationHistory: [] });
+    },
+
+    // Highlights
+    highlights: (() => {
+        try {
+            const stored = typeof window !== 'undefined' ? localStorage.getItem('sr_highlights') : null;
+            return stored ? JSON.parse(stored) : [];
+        } catch { return []; }
+    })(),
+    addHighlight: (entry) => set((state) => {
+        const newEntry: HighlightEntry = {
+            ...entry,
+            id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            timestamp: Date.now(),
+        };
+        const updated = [newEntry, ...state.highlights];
+        try { localStorage.setItem('sr_highlights', JSON.stringify(updated)); } catch { /* quota */ }
+        return { highlights: updated };
+    }),
+    removeHighlight: (id) => set((state) => {
+        const updated = state.highlights.filter(h => h.id !== id);
+        try { localStorage.setItem('sr_highlights', JSON.stringify(updated)); } catch { /* quota */ }
+        return { highlights: updated };
+    }),
+
+    // Bilingual Mode
+    isBilingualMode: false,
+    setBilingualMode: (v) => set({ isBilingualMode: v }),
 }));

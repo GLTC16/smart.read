@@ -3,7 +3,7 @@
 import { useStore } from '@/store/useStore';
 import { translateText } from '@/services/translationService';
 import { useEffect, useRef, useState, useMemo } from 'react';
-import { X, Copy, Globe, Loader2, Check, GripHorizontal } from 'lucide-react';
+import { X, Copy, Globe, Loader2, Check, GripHorizontal, Star } from 'lucide-react';
 import translations from '@/lib/translations';
 
 const LANGUAGES: { code: import('@/store/useStore').Language; label: string; flag: string }[] = [
@@ -32,10 +32,15 @@ export default function TranslationTooltip() {
         setTargetLanguage,
         resetSelection,
         uiLanguage,
+        addToHistory,
+        addHighlight,
+        currentFile,
+        fileType,
     } = useStore();
 
     const tooltipRef = useRef<HTMLDivElement>(null);
     const [copied, setCopied] = useState(false);
+    const [saved, setSaved] = useState(false);
     const [isDraggingState, setIsDraggingState] = useState(false);
     
     // Drag state
@@ -52,7 +57,10 @@ export default function TranslationTooltip() {
         isDragging.current = false;
     }, [selectionPosition]);
 
-    // Fetch translation when text or language changes
+    // Reset saved state when selection changes
+    useEffect(() => { setSaved(false); }, [selectedText]);
+
+    // Fetch translation when text or language changes + auto-add to history
     useEffect(() => {
         if (!selectedText) return;
 
@@ -63,7 +71,12 @@ export default function TranslationTooltip() {
             try {
                 const translatedText = await translateText(selectedText, targetLanguage);
                 if (!cancelled) {
-                    setTranslationResult(translatedText || t.translationUnavailable);
+                    const result = translatedText || t.translationUnavailable;
+                    setTranslationResult(result);
+                    // Auto-add to history
+                    if (translatedText && translatedText !== t.translationUnavailable) {
+                        addToHistory({ originalText: selectedText, translatedText, targetLanguage });
+                    }
                 }
             } catch {
                 if (!cancelled) {
@@ -77,7 +90,7 @@ export default function TranslationTooltip() {
         };
         fetchTranslation();
         return () => { cancelled = true; };
-    }, [selectedText, targetLanguage, setIsTranslationLoading, setTranslationResult, t]);
+    }, [selectedText, targetLanguage, setIsTranslationLoading, setTranslationResult, t, addToHistory]);
 
     // Tooltip auto-closes when selection collapses in the respective viewers (handled by the viewer components)
 
@@ -86,6 +99,24 @@ export default function TranslationTooltip() {
         await navigator.clipboard.writeText(translationResult);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
+    };
+
+    const handleSave = () => {
+        if (!selectedText || !translationResult) return;
+        const fileName = currentFile instanceof File
+            ? currentFile.name.replace(/\.[^/.]+$/, '')
+            : typeof currentFile === 'string'
+                ? (currentFile.split('/').pop() || '').replace(/\.[^/.]+$/, '')
+                : 'Desconocido';
+        addHighlight({
+            originalText: selectedText,
+            translatedText: translationResult,
+            targetLanguage,
+            fileName,
+            fileType,
+        });
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2500);
     };
 
     const handlePointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
@@ -211,19 +242,35 @@ export default function TranslationTooltip() {
                                 </button>
                             ))}
                         </div>
-                        {translationResult && (
-                            <button
-                                onClick={handleCopy}
-                                className="p-2 rounded-xl flex-shrink-0 ml-2"
-                                style={{
-                                    color: copied ? 'var(--teal-hover)' : 'var(--text-muted)',
-                                    background: copied ? 'rgba(20,184,166,0.15)' : 'rgba(255,255,255,0.06)',
-                                    border: copied ? '1px solid rgba(20,184,166,0.3)' : '1px solid transparent',
-                                }}
-                            >
-                                {copied ? <Check size={16} /> : <Copy size={16} />}
-                            </button>
-                        )}
+                        <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                            {translationResult && (
+                                <button
+                                    onClick={handleSave}
+                                    className="p-2 rounded-xl transition-all"
+                                    style={{
+                                        color: saved ? '#fbbf24' : 'var(--text-muted)',
+                                        background: saved ? 'rgba(251,191,36,0.15)' : 'rgba(255,255,255,0.06)',
+                                        border: saved ? '1px solid rgba(251,191,36,0.3)' : '1px solid transparent',
+                                    }}
+                                    title={saved ? '¡Guardado!' : 'Guardar'}
+                                >
+                                    <Star size={16} fill={saved ? '#fbbf24' : 'none'} />
+                                </button>
+                            )}
+                            {translationResult && (
+                                <button
+                                    onClick={handleCopy}
+                                    className="p-2 rounded-xl transition-all"
+                                    style={{
+                                        color: copied ? 'var(--teal-hover)' : 'var(--text-muted)',
+                                        background: copied ? 'rgba(20,184,166,0.15)' : 'rgba(255,255,255,0.06)',
+                                        border: copied ? '1px solid rgba(20,184,166,0.3)' : '1px solid transparent',
+                                    }}
+                                >
+                                    {copied ? <Check size={16} /> : <Copy size={16} />}
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -371,21 +418,37 @@ export default function TranslationTooltip() {
                         ))}
                     </div>
 
-                    {/* Copy button */}
-                    {translationResult && (
-                        <button
-                            onClick={handleCopy}
-                            className="p-1.5 rounded-lg transition-all duration-150 flex-shrink-0 ml-2"
-                            style={{
-                                color: copied ? 'var(--teal-hover)' : 'var(--text-muted)',
-                                background: copied ? 'rgba(20,184,166,0.15)' : 'transparent',
-                                border: copied ? '1px solid rgba(20,184,166,0.3)' : '1px solid transparent',
-                            }}
-                            title={t.copyTranslation}
-                        >
-                            {copied ? <Check size={14} /> : <Copy size={14} />}
-                        </button>
-                    )}
+                    {/* Save + Copy buttons */}
+                    <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                        {translationResult && (
+                            <button
+                                onClick={handleSave}
+                                className="p-1.5 rounded-lg transition-all duration-150"
+                                style={{
+                                    color: saved ? '#fbbf24' : 'var(--text-muted)',
+                                    background: saved ? 'rgba(251,191,36,0.15)' : 'transparent',
+                                    border: saved ? '1px solid rgba(251,191,36,0.3)' : '1px solid transparent',
+                                }}
+                                title={saved ? '¡Guardado!' : 'Guardar en highlights'}
+                            >
+                                <Star size={14} fill={saved ? '#fbbf24' : 'none'} />
+                            </button>
+                        )}
+                        {translationResult && (
+                            <button
+                                onClick={handleCopy}
+                                className="p-1.5 rounded-lg transition-all duration-150"
+                                style={{
+                                    color: copied ? 'var(--teal-hover)' : 'var(--text-muted)',
+                                    background: copied ? 'rgba(20,184,166,0.15)' : 'transparent',
+                                    border: copied ? '1px solid rgba(20,184,166,0.3)' : '1px solid transparent',
+                                }}
+                                title={t.copyTranslation}
+                            >
+                                {copied ? <Check size={14} /> : <Copy size={14} />}
+                            </button>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useStore } from '@/store/useStore';
-import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, List, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, List, X, Languages } from 'lucide-react';
 import { useEffect, useCallback, useMemo } from 'react';
 import translations from '@/lib/translations';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -17,6 +17,7 @@ export default function BottomBar({ toggleSidebar }: BottomBarProps) {
         epubRendition,
         zoomLevel, setZoomLevel,
         clearFile, uiLanguage,
+        isBilingualMode, setBilingualMode,
     } = useStore();
 
     const t = useMemo(() => translations[uiLanguage], [uiLanguage]);
@@ -226,6 +227,28 @@ export default function BottomBar({ toggleSidebar }: BottomBarProps) {
                         <ZoomIn size={16} />
                     </button>
                 </div>
+
+                {/* Divider */}
+                <div style={{ width: '1px', height: '28px', background: 'rgba(255,255,255,0.08)', margin: '0 4px' }} />
+
+                {/* Bilingual toggle — txt and epub */}
+                {(fileType === 'txt' || fileType === 'epub') && (
+                    <>
+                        <div style={{ width: '1px', height: '28px', background: 'rgba(255,255,255,0.08)', margin: '0 4px' }} />
+                        <button
+                            onClick={() => setBilingualMode(!isBilingualMode)}
+                            className="p-2.5 rounded-xl transition-all duration-150 active:scale-95"
+                            style={{
+                                color: isBilingualMode ? 'var(--accent-hover)' : 'var(--text-muted)',
+                                background: isBilingualMode ? 'rgba(99,102,241,0.18)' : 'transparent',
+                                border: isBilingualMode ? '1px solid rgba(99,102,241,0.35)' : '1px solid transparent',
+                            }}
+                            title={isBilingualMode ? 'Desactivar modo bilingüe' : 'Modo bilingüe (original + traducción)'}
+                        >
+                            <Languages size={16} />
+                        </button>
+                    </>
+                )}
 
                 {/* Divider */}
                 <div style={{ width: '1px', height: '28px', background: 'rgba(255,255,255,0.08)', margin: '0 4px' }} />

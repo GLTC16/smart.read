@@ -4,6 +4,7 @@ import { useStore } from "@/store/useStore";
 import dynamic from "next/dynamic";
 import { Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
+import BilingualTXTView from "./BilingualTXTView";
 
 const spinnerLoader = (color: string, bg: string, text: string) => (
     <div className="flex flex-col items-center justify-center gap-4 h-full" style={{ background: 'var(--bg-surface)', minHeight: '400px' }}>
@@ -30,7 +31,7 @@ const TXTViewer = dynamic(() => import("./TXTViewer"), {
 });
 
 export default function BookViewer() {
-    const { currentFile, fileType } = useStore();
+    const { currentFile, fileType, isBilingualMode } = useStore();
 
     if (!currentFile) return null;
 
@@ -48,7 +49,8 @@ export default function BookViewer() {
         >
             {fileType === 'pdf' && <PDFViewer />}
             {fileType === 'epub' && <EpubViewer />}
-            {fileType === 'txt' && <TXTViewer />}
+            {fileType === 'txt' && !isBilingualMode && <TXTViewer />}
+            {fileType === 'txt' && isBilingualMode && <BilingualTXTView />}
         </motion.div>
     );
 }

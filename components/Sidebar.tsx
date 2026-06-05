@@ -1,11 +1,15 @@
 'use client';
 
 import { useStore } from '@/store/useStore';
-import { BookOpen, X, LogOut, UserCircle } from 'lucide-react';
-import { useMemo } from 'react';
+import { BookOpen, X, LogOut, UserCircle, Star, Clock } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import translations from '@/lib/translations';
 import { motion, AnimatePresence } from 'framer-motion';
+import HistoryPanel from './HistoryPanel';
+import HighlightsPanel from './HighlightsPanel';
+
+type Tab = 'toc' | 'highlights' | 'history';
 
 interface SidebarProps {
     isOpen: boolean;
@@ -15,6 +19,7 @@ interface SidebarProps {
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     const { toc, setCurrentPage, fileType, epubRendition, clearFile, uiLanguage } = useStore();
     const t = useMemo(() => translations[uiLanguage], [uiLanguage]);
+    const [activeTab, setActiveTab] = useState<Tab>('toc');
 
     const handleNav = (item: import('@/store/useStore').TOCItem) => {
         if (fileType === 'epub') {
@@ -24,6 +29,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         }
         onClose();
     };
+
+    const tabs: { id: Tab; icon: typeof BookOpen; label: string }[] = [
+        { id: 'toc', icon: BookOpen, label: t.contents },
+        { id: 'highlights', icon: Star, label: 'Guardados' },
+        { id: 'history', icon: Clock, label: 'Historial' },
+    ];
 
     return (
         <AnimatePresence>
@@ -64,12 +75,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                                 borderBottom: '1px solid rgba(255,255,255,0.06)',
                             }}
                         >
-                            <div className="flex items-center gap-2.5">
-                                <div className="p-1.5 rounded-lg" style={{ background: 'rgba(99,102,241,0.2)', border: '1px solid rgba(99,102,241,0.3)' }}>
-                                    <BookOpen size={16} style={{ color: 'var(--accent-hover)' }} />
-                                </div>
-                                <span className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>{t.contents}</span>
-                            </div>
+                            <span className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>SmartRead</span>
                             <motion.button
                                 onClick={onClose}
                                 whileHover={{ scale: 1.1, backgroundColor: 'rgba(255,255,255,0.08)' }}
@@ -82,44 +88,96 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                             </motion.button>
                         </div>
 
-                        {/* TOC */}
+                        {/* Tabs */}
                         <div
-                            className="flex-1 overflow-y-auto p-3 space-y-0.5"
-                            style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(99,102,241,0.25) transparent' }}
+                            className="flex gap-0 px-3 py-2"
+                            style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
                         >
-                            {toc.length === 0 ? (
-                                <motion.div
-                                    initial={{ opacity: 0, y: 8 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.1 }}
-                                    className="flex flex-col items-center justify-center mt-16 gap-3"
-                                    style={{ color: 'var(--text-disabled)' }}
+                            {tabs.map(({ id, icon: Icon, label }) => (
+                                <button
+                                    key={id}
+                                    onClick={() => setActiveTab(id)}
+                                    className="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wide transition-all"
+                                    style={{
+                                        color: activeTab === id ? 'var(--accent-hover)' : 'var(--text-muted)',
+                                        background: activeTab === id ? 'rgba(99,102,241,0.14)' : 'transparent',
+                                        border: activeTab === id ? '1px solid rgba(99,102,241,0.2)' : '1px solid transparent',
+                                    }}
                                 >
-                                    <BookOpen size={28} style={{ opacity: 0.3 }} />
-                                    <p className="text-sm text-center">{t.noTocAvailable}</p>
-                                </motion.div>
-                            ) : (
-                                toc.map((item, i) => (
-                                    <motion.button
-                                        key={i}
-                                        onClick={() => handleNav(item)}
-                                        initial={{ opacity: 0, x: -12 }}
+                                    <Icon size={14} />
+                                    {label}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Tab content */}
+                        <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+                            <AnimatePresence mode="wait">
+                                {activeTab === 'toc' && (
+                                    <motion.div
+                                        key="toc"
+                                        initial={{ opacity: 0, x: -8 }}
                                         animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: i * 0.03, duration: 0.18 }}
-                                        whileHover={{
-                                            backgroundColor: 'rgba(99,102,241,0.1)',
-                                            x: 4,
-                                            color: 'var(--accent-hover)',
-                                        }}
-                                        whileTap={{ scale: 0.98 }}
-                                        className="w-full text-left px-4 py-2.5 text-sm rounded-xl truncate font-medium cursor-pointer"
-                                        style={{ color: 'var(--text-secondary)', borderLeft: '2px solid transparent' }}
-                                        title={item.label}
+                                        exit={{ opacity: 0, x: 8 }}
+                                        transition={{ duration: 0.15 }}
+                                        className="flex-1 overflow-y-auto p-3 space-y-0.5"
+                                        style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(99,102,241,0.25) transparent' }}
                                     >
-                                        {item.label}
-                                    </motion.button>
-                                ))
-                            )}
+                                        {toc.length === 0 ? (
+                                            <div
+                                                className="flex flex-col items-center justify-center mt-16 gap-3"
+                                                style={{ color: 'var(--text-disabled)' }}
+                                            >
+                                                <BookOpen size={28} style={{ opacity: 0.3 }} />
+                                                <p className="text-sm text-center">{t.noTocAvailable}</p>
+                                            </div>
+                                        ) : (
+                                            toc.map((item, i) => (
+                                                <motion.button
+                                                    key={i}
+                                                    onClick={() => handleNav(item)}
+                                                    initial={{ opacity: 0, x: -12 }}
+                                                    animate={{ opacity: 1, x: 0 }}
+                                                    transition={{ delay: i * 0.03, duration: 0.18 }}
+                                                    whileHover={{ backgroundColor: 'rgba(99,102,241,0.1)', x: 4, color: 'var(--accent-hover)' }}
+                                                    whileTap={{ scale: 0.98 }}
+                                                    className="w-full text-left px-4 py-2.5 text-sm rounded-xl truncate font-medium cursor-pointer"
+                                                    style={{ color: 'var(--text-secondary)', borderLeft: '2px solid transparent' }}
+                                                    title={item.label}
+                                                >
+                                                    {item.label}
+                                                </motion.button>
+                                            ))
+                                        )}
+                                    </motion.div>
+                                )}
+
+                                {activeTab === 'highlights' && (
+                                    <motion.div
+                                        key="highlights"
+                                        initial={{ opacity: 0, x: -8 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        exit={{ opacity: 0, x: 8 }}
+                                        transition={{ duration: 0.15 }}
+                                        className="flex-1 overflow-hidden flex flex-col"
+                                    >
+                                        <HighlightsPanel />
+                                    </motion.div>
+                                )}
+
+                                {activeTab === 'history' && (
+                                    <motion.div
+                                        key="history"
+                                        initial={{ opacity: 0, x: -8 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        exit={{ opacity: 0, x: 8 }}
+                                        transition={{ duration: 0.15 }}
+                                        className="flex-1 overflow-hidden flex flex-col"
+                                    >
+                                        <HistoryPanel />
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
                         </div>
 
                         {/* Footer */}
