@@ -114,6 +114,7 @@ export default function TranslationTooltip() {
     // Smart positioning: clamp horizontally and flip vertically if needed
     const viewportW = typeof window !== 'undefined' ? window.innerWidth : 800;
     const viewportH = typeof window !== 'undefined' ? window.innerHeight : 600;
+    const isMobile = viewportW < 640;
 
     const halfTooltip = TOOLTIP_WIDTH / 2;
     const clampedX = Math.max(
@@ -131,6 +132,103 @@ export default function TranslationTooltip() {
 
     const finalX = clampedX + dragOffset.x;
     const finalY = topPosition + dragOffset.y;
+
+    // Mobile: bottom sheet anchored to bottom of viewport
+    if (isMobile) {
+        return (
+            <div
+                id="translation-tooltip"
+                ref={tooltipRef}
+                className="fixed z-[9999] flex flex-col overflow-hidden"
+                style={{
+                    left: 8,
+                    right: 8,
+                    bottom: 80, // above BottomBar
+                    animation: 'tooltipIn 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
+                    background: 'rgba(10, 10, 24, 0.95)',
+                    backdropFilter: 'blur(28px) saturate(200%)',
+                    WebkitBackdropFilter: 'blur(28px) saturate(200%)',
+                    border: '1px solid rgba(99,102,241,0.3)',
+                    borderRadius: '20px',
+                    boxShadow: '0 -4px 40px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.06)',
+                }}
+            >
+                {/* Drag handle */}
+                <div className="flex justify-center pt-2 pb-1">
+                    <div className="w-10 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.18)' }} />
+                </div>
+                {/* Header */}
+                <div
+                    className="flex items-center justify-between px-4 py-2"
+                    style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
+                >
+                    <div className="flex items-center gap-2">
+                        <Globe size={13} style={{ color: 'var(--accent-hover)' }} />
+                        <span className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
+                            {activeLang?.flag} {activeLang?.label ?? targetLanguage.toUpperCase()}
+                        </span>
+                    </div>
+                    <button
+                        onClick={resetSelection}
+                        className="p-1.5 rounded-lg"
+                        style={{ color: 'var(--text-muted)', background: 'rgba(255,255,255,0.06)' }}
+                    >
+                        <X size={14} />
+                    </button>
+                </div>
+                {/* Body */}
+                <div className="p-4 flex flex-col gap-3">
+                    <div className="text-sm italic pl-3" style={{ color: 'var(--text-muted)', borderLeft: '2px solid rgba(99,102,241,0.4)' }}>
+                        &ldquo;{selectedText}&rdquo;
+                    </div>
+                    <div className="min-h-8">
+                        {isTranslationLoading ? (
+                            <div className="flex items-center gap-2" style={{ color: 'var(--text-muted)' }}>
+                                <Loader2 size={16} className="animate-spin" style={{ color: 'var(--accent)' }} />
+                                <span className="text-sm">{t.translating}</span>
+                            </div>
+                        ) : (
+                            <div className="text-base font-semibold leading-snug font-reading" style={{ color: 'var(--text-primary)' }}>
+                                {translationResult}
+                            </div>
+                        )}
+                    </div>
+                    {/* Language row + copy */}
+                    <div className="flex items-center justify-between pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                        <div className="flex flex-wrap gap-1">
+                            {LANGUAGES.map((lang) => (
+                                <button
+                                    key={lang.code}
+                                    onClick={() => setTargetLanguage(lang.code)}
+                                    className="text-[10px] font-bold px-2 py-1.5 rounded-lg min-w-[36px] transition-all"
+                                    style={{
+                                        background: targetLanguage === lang.code ? 'rgba(99,102,241,0.25)' : 'rgba(255,255,255,0.04)',
+                                        color: targetLanguage === lang.code ? 'var(--accent-hover)' : 'var(--text-muted)',
+                                        border: targetLanguage === lang.code ? '1px solid rgba(99,102,241,0.4)' : '1px solid transparent',
+                                    }}
+                                >
+                                    {lang.flag}
+                                </button>
+                            ))}
+                        </div>
+                        {translationResult && (
+                            <button
+                                onClick={handleCopy}
+                                className="p-2 rounded-xl flex-shrink-0 ml-2"
+                                style={{
+                                    color: copied ? 'var(--teal-hover)' : 'var(--text-muted)',
+                                    background: copied ? 'rgba(20,184,166,0.15)' : 'rgba(255,255,255,0.06)',
+                                    border: copied ? '1px solid rgba(20,184,166,0.3)' : '1px solid transparent',
+                                }}
+                            >
+                                {copied ? <Check size={16} /> : <Copy size={16} />}
+                            </button>
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div

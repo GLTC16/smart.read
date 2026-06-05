@@ -5,6 +5,7 @@ import { ReactReader } from "react-reader";
 import { useStore } from "@/store/useStore";
 import { Loader2 } from "lucide-react";
 import translations from "@/lib/translations";
+import ReaderTopBar from "./ReaderTopBar";
 
 type EpubLocation = string | number;
 type EpubRendition = {
@@ -21,13 +22,15 @@ type EpubRendition = {
     };
     currentLocation: () => { start?: { cfi: string } } | null;
     on: (event: "selected", callback: (cfiRange: string, contents: EpubContents) => void) => void;
+    prev: () => void;
+    next: () => void;
     book: {
         ready: Promise<void>;
         spine: { items: unknown[] };
     };
     hooks: {
         content: {
-            register: (fn: (contents: { document: Document }) => void) => void;
+            register: (fn: (contents: { document: Document; window: Window }) => void) => void;
         };
     };
 };
@@ -35,9 +38,50 @@ type EpubContents = {
     window: Window;
 };
 
-// Threshold to skip location generation (avoids freezing on large books)
 const LARGE_BOOK_SPINE_THRESHOLD = 60;
 const LARGE_BOOK_SIZE_BYTES = 4 * 1024 * 1024; // 4 MB
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+/** Expand caret range to the word boundary around the cursor */
+function expandToWord(range: Range, doc: Document): string {
+    try {
+        // Standard API
+        (range as Range & { expand: (unit: string) => void }).expand('word');
+        return range.toString().trim();
+    } catch {
+        // Manual fallback
+        const node = range.startContainer;
+        if (node.nodeType !== Node.TEXT_NODE) return '';
+        const text = node.textContent || '';
+        let s = range.startOffset;
+        let e = range.startOffset;
+        while (s > 0 && /[\p{L}\p{N}''-]/u.test(text[s - 1])) s--;
+        while (e < text.length && /[\p{L}\p{N}''-]/u.test(text[e])) e++;
+        range.setStart(node, s);
+        range.setEnd(node, e);
+        return text.slice(s, e).trim();
+    }
+}
+
+/** Find the iframe element whose contentWindow === win */
+function findIframe(
+    win: Window,
+    containerEl: HTMLDivElement | null,
+): HTMLIFrameElement | null {
+    let iframe: HTMLIFrameElement | null = null;
+    try { iframe = win.frameElement as HTMLIFrameElement; } catch { /* cross-origin guard */ }
+    if (!iframe && containerEl) {
+        const iframes = Array.from(containerEl.querySelectorAll('iframe'));
+        for (const f of iframes) {
+            try { if (f.contentWindow === win) { iframe = f; break; } } catch { /* skip */ }
+        }
+        if (!iframe && iframes.length === 1) iframe = iframes[0];
+    }
+    return iframe;
+}
+
+// ─── Component ───────────────────────────────────────────────────────────────
 
 export default function EpubViewer() {
     const {
@@ -64,7 +108,6 @@ export default function EpubViewer() {
     const isLargeBookRef = useRef(false);
     const lastPageRef = useRef(currentPage);
 
-    // scrolled-continuous is most compatible across epub types.
     const epubOptions = useMemo(() => ({
         flow: "scrolled-continuous",
         manager: "continuous",
@@ -72,57 +115,42 @@ export default function EpubViewer() {
         height: "100%",
     }), []);
 
-    // epubjs determineType() checks file extension on the URL.
-    // Blob URLs have no extension → falls to DIRECTORY branch → fails.
-    // Fix: read File as ArrayBuffer so epubjs treats it as INPUT_TYPE.BINARY.
+    // ── Build epubData URL ────────────────────────────────────────────────────
     const [epubData, setEpubData] = useState<string | null>(null);
 
     useEffect(() => {
-        if (!currentFile) {
-            setEpubData(null);
-            return;
-        }
+        if (!currentFile) { setEpubData(null); return; }
 
         let url: string;
         let isObjectUrl = false;
 
         if (currentFile instanceof File) {
-            // Track file size for large book detection
-            if (currentFile.size > LARGE_BOOK_SIZE_BYTES) {
-                isLargeBookRef.current = true;
-            }
-            // Use ObjectURL but append a hash to trick epub.js determineType()
+            if (currentFile.size > LARGE_BOOK_SIZE_BYTES) isLargeBookRef.current = true;
+            // Append #file.epub so epubjs determineType() recognises the extension
             url = URL.createObjectURL(currentFile) + '#file.epub';
             isObjectUrl = true;
         } else {
             url = currentFile as string;
-            // Force cache reset for cloud URLs if it doesn't already have query params
-            if (url.startsWith('http') && !url.includes('?')) {
-                url += `?t=${Date.now()}`;
-            }
+            if (url.startsWith('http') && !url.includes('?')) url += `?t=${Date.now()}`;
         }
-        
+
         setEpubData(url);
 
         return () => {
             setIsReaderReady(false);
             setEpubRendition(null as any);
-            if (isObjectUrl) {
-                URL.revokeObjectURL(url.split('#')[0]);
-            }
+            if (isObjectUrl) URL.revokeObjectURL(url.split('#')[0]);
         };
     }, [currentFile, setEpubRendition]);
 
-    // Dynamic zoom: update EPUB font size when zoomLevel changes
+    // ── Sync zoom level ───────────────────────────────────────────────────────
     useEffect(() => {
         if (renditionRef.current && isReaderReady) {
-            try {
-                renditionRef.current.themes.fontSize(`${zoomLevel}%`);
-            } catch { /* silent — some renditions don't support fontSize */ }
+            try { renditionRef.current.themes.fontSize(`${zoomLevel}%`); } catch { /* silent */ }
         }
     }, [zoomLevel, isReaderReady]);
 
-    // Navigate to page when user moves the slider
+    // ── Page slider → navigate ────────────────────────────────────────────────
     useEffect(() => {
         if (isReaderReady && renditionRef.current && currentPage !== lastPageRef.current) {
             lastPageRef.current = currentPage;
@@ -130,9 +158,7 @@ export default function EpubViewer() {
                 const locations = renditionRef.current.locations;
                 if (locations && typeof locations.length === 'function' && locations.length() > 0) {
                     const cfi = (locations as any).cfiFromLocation(currentPage - 1);
-                    if (cfi) {
-                        renditionRef.current.display(cfi);
-                    }
+                    if (cfi) renditionRef.current.display(cfi);
                 }
             } catch (e) {
                 console.error("Failed to navigate to page:", e);
@@ -140,6 +166,7 @@ export default function EpubViewer() {
         }
     }, [currentPage, isReaderReady]);
 
+    // ── Location changed ──────────────────────────────────────────────────────
     const onLocationChanged = useCallback((loc: EpubLocation) => {
         setLocation(loc);
         if (typeof loc === "string") {
@@ -149,7 +176,7 @@ export default function EpubViewer() {
                     const current = renditionRef.current?.currentLocation();
                     if (current?.start) {
                         const page = renditionRef.current?.locations?.locationFromCfi(current.start.cfi) ?? 0;
-                        lastPageRef.current = page + 1; // Prevent feedback loop
+                        lastPageRef.current = page + 1;
                         setCurrentPage(page + 1);
                     }
                 }
@@ -157,34 +184,35 @@ export default function EpubViewer() {
         }
     }, [setCurrentLocation, setCurrentPage]);
 
+    // ── Rendition setup ───────────────────────────────────────────────────────
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handleRendition = useCallback((rendition: any) => {
         renditionRef.current = rendition as EpubRendition;
         setEpubRendition(rendition as unknown as import('@/store/useStore').Rendition);
         setIsReaderReady(true);
 
-        // Set initial font size based on current zoom
-        try {
-            rendition.themes.fontSize(`${zoomLevel}%`);
-        } catch { /* silent */ }
+        try { rendition.themes.fontSize(`${zoomLevel}%`); } catch { /* silent */ }
 
-        // Improve typography and ensure smooth scrolling inside EPUB iframe
+        // ── Content hook: runs inside every iframe epubjs creates ─────────────
         rendition.hooks.content.register((contents: { document: Document; window: Window }) => {
             const doc = contents.document;
             const win = contents.window;
             if (!doc || !win) return;
+
+            // ── Typography ─────────────────────────────────────────────────────
             const style = doc.createElement('style');
             style.textContent = `
-                body {
+                html, body {
                     font-family: 'Lora', Georgia, serif !important;
                     line-height: 1.8 !important;
                     padding: 0 8px !important;
                     overflow: auto !important;
                     -webkit-overflow-scrolling: touch !important;
-                    touch-action: pan-x pan-y pinch-zoom !important;
+                    touch-action: pan-y !important;
                     -webkit-user-select: text !important;
                     user-select: text !important;
                     -webkit-touch-callout: default !important;
+                    cursor: text !important;
                 }
                 p { line-height: 1.8 !important; margin-bottom: 1em !important; }
                 * { max-width: 100% !important; box-sizing: border-box !important; }
@@ -192,107 +220,182 @@ export default function EpubViewer() {
             `;
             doc.head.appendChild(style);
 
-            // 1. Bulletproof manual selection handler with proper debouncing
-            let selectionTimeout: NodeJS.Timeout;
+            // ── 1. Text selection handler ──────────────────────────────────────
+            let selTimeout: ReturnType<typeof setTimeout>;
             const handleSelection = () => {
-                clearTimeout(selectionTimeout);
-                selectionTimeout = setTimeout(() => {
+                clearTimeout(selTimeout);
+                selTimeout = setTimeout(() => {
                     try {
-                        const selection = win.getSelection();
-                        if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
-                            useStore.getState().resetSelection();
+                        const sel = win.getSelection();
+                        if (!sel || sel.rangeCount === 0 || sel.isCollapsed) {
+                            // Don't reset — tap-to-translate already set it
                             return;
                         }
-                        
-                        const text = selection.toString().trim();
+                        const text = sel.toString().trim();
                         if (!text) return;
-                        
-                        const range = selection.getRangeAt(0);
+
+                        const range = sel.getRangeAt(0);
                         const rect = range.getBoundingClientRect();
-                        
-                        // --- SAFE IFRAME DISCOVERY ---
-                        let iframe: HTMLIFrameElement | null = null;
-                        
-                        try {
-                            // Try direct access (throws SecurityError on some cross-origin/blob setups)
-                            iframe = win.frameElement as HTMLIFrameElement;
-                        } catch (err) {
-                            // Suppress SecurityError
-                        }
-
-                        // Fallback: search DOM for matching contentWindow
-                        if (!iframe && containerRef.current) {
-                            const iframes = Array.from(containerRef.current.querySelectorAll('iframe'));
-                            for (const f of iframes) {
-                                try {
-                                    if (f.contentWindow === win) {
-                                        iframe = f;
-                                        break;
-                                    }
-                                } catch (e) {
-                                    // Ignore access errors on other iframes
-                                }
-                            }
-                            // Last resort: if only 1 iframe exists, use it
-                            if (!iframe && iframes.length === 1) {
-                                iframe = iframes[0];
-                            }
-                        }
-                        
+                        const iframe = findIframe(win, containerRef.current);
                         if (!iframe) return;
-                        
-                        const iframeRect = iframe.getBoundingClientRect();
 
+                        const iframeRect = iframe.getBoundingClientRect();
                         setSelectedText(text);
                         setSelectionPosition({
                             x: iframeRect.left + rect.left + rect.width / 2,
                             y: iframeRect.top + rect.top,
                         });
-                    } catch (e) { 
-                        console.error("Manual epub selection error:", e); 
+                    } catch (e) {
+                        console.error("EPUB selection error:", e);
                     }
-                }, 100); // Fast 100ms debounce captures fleeting mobile selections
+                }, 100);
             };
 
-            // 2. Bind listeners directly to iframe document
             doc.addEventListener('selectionchange', handleSelection, false);
-            doc.addEventListener('touchend', handleSelection, false);
             doc.addEventListener('mouseup', handleSelection, false);
+
+            // ── 2. Tap-to-translate (single tap → word) ────────────────────────
+            // Track if it was a move (not a tap)
+            let tapMoved = false;
+            let tapT0 = 0;
+            let tapX0 = 0, tapY0 = 0;
+
+            doc.addEventListener('touchstart', (e: Event) => {
+                const te = e as TouchEvent;
+                if (te.touches.length === 1) {
+                    tapMoved = false;
+                    tapT0 = Date.now();
+                    tapX0 = te.touches[0].clientX;
+                    tapY0 = te.touches[0].clientY;
+                }
+            }, { passive: true });
+
+            doc.addEventListener('touchmove', (e: Event) => {
+                const te = e as TouchEvent;
+                if (te.touches.length === 1) {
+                    const dx = Math.abs(te.touches[0].clientX - tapX0);
+                    const dy = Math.abs(te.touches[0].clientY - tapY0);
+                    if (dx > 8 || dy > 8) tapMoved = true;
+                }
+            }, { passive: true });
+
+            doc.addEventListener('click', (e: Event) => {
+                const me = e as MouseEvent;
+                const dt = Date.now() - tapT0;
+
+                // Skip if it was a drag/swipe, or a long press (> 600 ms)
+                if (tapMoved || dt > 600) { tapMoved = false; return; }
+
+                // Skip if text already selected
+                const sel = win.getSelection();
+                if (sel && !sel.isCollapsed && sel.toString().trim().length > 1) return;
+
+                // Get caret range at click position
+                let range: Range | null = null;
+                if ('caretRangeFromPoint' in doc) {
+                    range = (doc as any).caretRangeFromPoint(me.clientX, me.clientY);
+                } else if ('caretPositionFromPoint' in doc) {
+                    const pos = (doc as any).caretPositionFromPoint(me.clientX, me.clientY);
+                    if (pos) {
+                        range = (doc as Document).createRange();
+                        range.setStart(pos.offsetNode, pos.offset);
+                        range.collapse(true);
+                    }
+                }
+                if (!range) return;
+
+                const word = expandToWord(range, doc);
+                if (!word || word.length < 2) return;
+
+                const rect = range.getBoundingClientRect();
+                if (rect.width === 0 && rect.height === 0) return;
+
+                const iframe = findIframe(win, containerRef.current);
+                if (!iframe) return;
+                const iframeRect = iframe.getBoundingClientRect();
+
+                setSelectedText(word);
+                setSelectionPosition({
+                    x: iframeRect.left + rect.left + rect.width / 2,
+                    y: iframeRect.top + rect.top,
+                });
+            });
+
+            // ── 3. Swipe L/R → chapter navigation ─────────────────────────────
+            let swipeX0 = 0, swipeY0 = 0, swipeT0 = 0;
+
+            doc.addEventListener('touchstart', (e: Event) => {
+                const te = e as TouchEvent;
+                if (te.touches.length === 1) {
+                    swipeX0 = te.touches[0].clientX;
+                    swipeY0 = te.touches[0].clientY;
+                    swipeT0 = Date.now();
+                }
+            }, { passive: true });
+
+            doc.addEventListener('touchend', (e: Event) => {
+                const te = e as TouchEvent;
+                if (te.changedTouches.length !== 1) return;
+                const dx = te.changedTouches[0].clientX - swipeX0;
+                const dy = te.changedTouches[0].clientY - swipeY0;
+                const dt = Date.now() - swipeT0;
+
+                // Fast horizontal swipe: < 350ms, |dx| > 65px, more H than V
+                if (dt < 350 && Math.abs(dx) > 65 && Math.abs(dx) > Math.abs(dy) * 2) {
+                    if (dx < 0) renditionRef.current?.next();
+                    else renditionRef.current?.prev();
+                }
+            }, { passive: true });
+
+            // ── 4. Pinch-to-zoom (2 fingers → font size) ──────────────────────
+            let pinchDist0 = 0;
+            let pinchZoom0 = 100;
+
+            doc.addEventListener('touchstart', (e: Event) => {
+                const te = e as TouchEvent;
+                if (te.touches.length === 2) {
+                    const dx = te.touches[0].clientX - te.touches[1].clientX;
+                    const dy = te.touches[0].clientY - te.touches[1].clientY;
+                    pinchDist0 = Math.sqrt(dx * dx + dy * dy);
+                    pinchZoom0 = useStore.getState().zoomLevel;
+                }
+            }, { passive: true });
+
+            doc.addEventListener('touchmove', (e: Event) => {
+                const te = e as TouchEvent;
+                if (te.touches.length === 2) {
+                    te.preventDefault(); // Prevent browser zoom
+                    const dx = te.touches[0].clientX - te.touches[1].clientX;
+                    const dy = te.touches[0].clientY - te.touches[1].clientY;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (pinchDist0 === 0) return;
+                    const newZoom = Math.max(50, Math.min(200, Math.round(pinchZoom0 * (dist / pinchDist0))));
+                    useStore.getState().setZoomLevel(newZoom);
+                }
+            }, { passive: false });
         });
 
-        // 3. Bulletproof fallback: use epub.js native 'selected' event
+        // ── epub.js native 'selected' event (secondary handler) ───────────────
         rendition.on('selected', (cfiRange: string, contents: any) => {
             try {
                 const win = contents.window;
-                const selection = win.getSelection();
-                if (!selection || selection.rangeCount === 0) return;
-                
-                const text = selection.toString().trim();
+                const sel = win.getSelection();
+                if (!sel || sel.rangeCount === 0) return;
+                const text = sel.toString().trim();
                 if (!text) return;
-                
-                const range = selection.getRangeAt(0);
+
+                const range = sel.getRangeAt(0);
                 const rect = range.getBoundingClientRect();
-                
-                let iframe: HTMLIFrameElement | null = null;
-                try { iframe = win.frameElement as HTMLIFrameElement; } catch (e) {}
-                
-                if (!iframe && containerRef.current) {
-                    const iframes = Array.from(containerRef.current.querySelectorAll('iframe'));
-                    for (const f of iframes) {
-                        try { if (f.contentWindow === win) { iframe = f; break; } } catch (e) {}
-                    }
-                    if (!iframe && iframes.length === 1) iframe = iframes[0];
-                }
-                
+                const iframe = findIframe(win, containerRef.current);
                 const iframeRect = iframe ? iframe.getBoundingClientRect() : { left: 0, top: 0 };
-                
+
                 setSelectedText(text);
                 setSelectionPosition({
                     x: iframeRect.left + rect.left + rect.width / 2,
                     y: iframeRect.top + rect.top,
                 });
             } catch (e) {
-                console.error("Native epub selection error:", e);
+                console.error("Native epub selected error:", e);
             }
         });
 
@@ -300,23 +403,21 @@ export default function EpubViewer() {
             try { rendition.display(currentLocation); } catch { /* silent */ }
         }
 
-        // Determine if this is a large book by spine count
+        // Location generation
         const book = rendition.book;
-        if (book?.spine?.items?.length > LARGE_BOOK_SPINE_THRESHOLD) {
-            isLargeBookRef.current = true;
-        }
+        if (book?.spine?.items?.length > LARGE_BOOK_SPINE_THRESHOLD) isLargeBookRef.current = true;
 
-        // Always generate locations so the slider can work universally
         if (book?.ready) {
-            book.ready.then(() => {
-                try { return rendition.locations.generate(1600); } catch { return []; }
-            }).then((locations: { length: number } | Array<unknown> | undefined) => {
-                if (locations) setTotalPages((locations as { length: number }).length);
-            }).catch(() => { /* location generation optional */ });
+            book.ready
+                .then(() => { try { return rendition.locations.generate(1600); } catch { return []; } })
+                .then((locations: { length: number } | Array<unknown> | undefined) => {
+                    if (locations) setTotalPages((locations as { length: number }).length);
+                })
+                .catch(() => { /* optional */ });
         }
-
-        // Generación de localizaciones omitida por brevedad
     }, [currentLocation, setTotalPages, setSelectedText, setSelectionPosition, setEpubRendition, zoomLevel]);
+
+    // ─────────────────────────────────────────────────────────────────────────
 
     if (!epubData) {
         return (
@@ -338,6 +439,10 @@ export default function EpubViewer() {
             className="relative w-full h-full epub-viewer-container"
             style={{ minHeight: '500px', background: 'var(--bg-surface)' }}
         >
+            {/* Top reader bar: title + progress */}
+            <ReaderTopBar />
+
+            {/* Loading overlay */}
             {!isReaderReady && (
                 <div
                     className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4"
@@ -345,19 +450,11 @@ export default function EpubViewer() {
                 >
                     <div
                         className="p-4 rounded-2xl"
-                        style={{
-                            background: 'rgba(20,184,166,0.1)',
-                            border: '1px solid rgba(20,184,166,0.2)',
-                        }}
+                        style={{ background: 'rgba(20,184,166,0.1)', border: '1px solid rgba(20,184,166,0.2)' }}
                     >
-                        <Loader2
-                            className="w-8 h-8 animate-spin"
-                            style={{ color: 'var(--teal)' }}
-                        />
+                        <Loader2 className="w-8 h-8 animate-spin" style={{ color: 'var(--teal)' }} />
                     </div>
-                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                        {t.loadingEpub}
-                    </p>
+                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{t.loadingEpub}</p>
                 </div>
             )}
 
@@ -368,15 +465,18 @@ export default function EpubViewer() {
                 getRendition={handleRendition}
                 tocChanged={setToc}
                 epubOptions={epubOptions}
-                // @ts-expect-error - Custom partial styles are allowed at runtime but TS complains about missing required keys
+                // @ts-expect-error - partial styles OK at runtime
                 readerStyles={{
                     container: { overflow: 'hidden', height: '100%', position: 'relative' },
-                    readerArea: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }
+                    readerArea: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
                 }}
             />
-            {/* CSS to hide the built-in React Reader footer since the prop crashes it */}
+
+            {/* Hide ReactReader's default navigation chrome */}
             <style jsx global>{`
-                .react-reader-footer, button[title="Close table of content"], button[title="Table of content"] {
+                .react-reader-footer,
+                button[title="Close table of content"],
+                button[title="Table of content"] {
                     display: none !important;
                 }
             `}</style>
