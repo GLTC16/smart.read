@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect, useLayoutEffect } from "react";
 import { ReactReader } from "react-reader";
 import { useStore } from "@/store/useStore";
 import { Loader2 } from "lucide-react";
@@ -108,14 +108,40 @@ export default function EpubViewer() {
     const isLargeBookRef = useRef(false);
     const lastPageRef = useRef(currentPage);
 
+    // ── Measure container in pixels ───────────────────────────────────────────
+    // react-reader renders EpubView as a sub-component with an unstyled root div
+    // between our `container` and `readerArea`. height:100% on readerArea inherits
+    // from that 0px div → iframe collapses. Bypass by passing EXPLICIT pixel
+    // dimensions to epubjs so it sets iframe dimensions directly via JS.
+    const [containerPx, setContainerPx] = useState({ w: 0, h: 0 });
+
+    useLayoutEffect(() => {
+        if (!containerRef.current) return;
+        const ro = new ResizeObserver((entries) => {
+            const { width, height } = entries[0].contentRect;
+            if (width > 0 && height > 0) {
+                setContainerPx({ w: Math.floor(width), h: Math.floor(height) });
+            }
+        });
+        ro.observe(containerRef.current);
+        return () => ro.disconnect();
+    }, []);
+
+    // Also re-measure rendition when container size changes (re-resize epubjs)
+    useEffect(() => {
+        if (renditionRef.current && isReaderReady && containerPx.w > 0 && containerPx.h > 0) {
+            try { (renditionRef.current as any).resize(containerPx.w, containerPx.h); } catch { /* silent */ }
+        }
+    }, [containerPx, isReaderReady]);
+
     // paginated = one section at a time, reliable prev/next nav.
-    // scrolled-continuous caused scroll-lock on mobile (overflow:hidden conflict).
-    // Do NOT pass width/height here — react-reader measures the container itself
-    // and passing "100%" conflicts with that measurement in paginated mode.
+    // width/height omitted from static options — epubjs gets them via resize() call
+    // once the container has measured itself (see useEffect above).
     const epubOptions = useMemo(() => ({
         flow: "paginated",
         spread: "none",
         manager: "default",
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }), []);
 
     // ── Build epubData ────────────────────────────────────────────────────────
@@ -501,17 +527,12 @@ export default function EpubViewer() {
                 // @ts-expect-error - partial styles OK at runtime
                 readerStyles={{
                     container: {
-                        // Keep default react-reader layout (relative + overflow:hidden + height:100%)
-                        // Only override the background color.
                         overflow: 'hidden',
                         position: 'relative',
                         height: '100%',
                         background: '#0f0f1c',
                     },
                     readerArea: {
-                        // CRITICAL: must stay position:relative (not absolute!) so that
-                        // the inner epubjs render container div gets proper height for
-                        // paginated mode page-dimension measurement.
                         position: 'relative',
                         zIndex: 1,
                         height: '100%',
