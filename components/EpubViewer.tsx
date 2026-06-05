@@ -115,31 +115,40 @@ export default function EpubViewer() {
         height: "100%",
     }), []);
 
-    // ── Build epubData URL ────────────────────────────────────────────────────
-    const [epubData, setEpubData] = useState<string | null>(null);
+    // ── Build epubData ────────────────────────────────────────────────────────
+    // ROOT FIX: blob URLs have no .epub extension in their path component
+    // so epubjs determineType() returns DIRECTORY → fails.
+    // Fix A (local File): read as ArrayBuffer → typeof !== "string" → BINARY → openEpub() ✓
+    // Fix B (cloud URL):  URL ends with .epub → determineType returns EPUB → fetch → openEpub() ✓
+    const [epubData, setEpubData] = useState<ArrayBuffer | string | null>(null);
 
     useEffect(() => {
         if (!currentFile) { setEpubData(null); return; }
 
-        let url: string;
-        let isObjectUrl = false;
+        let cancelled = false;
 
         if (currentFile instanceof File) {
             if (currentFile.size > LARGE_BOOK_SIZE_BYTES) isLargeBookRef.current = true;
-            // Append #file.epub so epubjs determineType() recognises the extension
-            url = URL.createObjectURL(currentFile) + '#file.epub';
-            isObjectUrl = true;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                if (!cancelled) setEpubData((e.target?.result as ArrayBuffer) ?? null);
+            };
+            reader.onerror = () => {
+                if (!cancelled) setEpubData(null);
+            };
+            reader.readAsArrayBuffer(currentFile);
         } else {
-            url = currentFile as string;
+            // Cloud / remote URL — must end in .epub for determineType to work
+            let url = currentFile as string;
             if (url.startsWith('http') && !url.includes('?')) url += `?t=${Date.now()}`;
+            setEpubData(url);
         }
 
-        setEpubData(url);
-
         return () => {
+            cancelled = true;
             setIsReaderReady(false);
             setEpubRendition(null as any);
-            if (isObjectUrl) URL.revokeObjectURL(url.split('#')[0]);
         };
     }, [currentFile, setEpubRendition]);
 
