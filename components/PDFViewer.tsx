@@ -93,12 +93,10 @@ export default function PDFViewer() {
         return () => window.removeEventListener('resize', calculateWidth);
     }, [isMobile]);
 
+    // ── Text selection → translation ──────────────────────────────────────────
     useEffect(() => {
         const handleSelectionEnd = (e: Event) => {
-            // Ignore if the click was inside the translation tooltip
             if (e.target && (e.target as Element).closest('#translation-tooltip')) return;
-
-            // Small delay to let the selection finalize
             setTimeout(() => {
                 const selection = window.getSelection();
                 if (!selection || selection.rangeCount === 0) return;
@@ -123,6 +121,60 @@ export default function PDFViewer() {
             document.removeEventListener('touchend', handleSelectionEnd);
         };
     }, [setSelectedText, setSelectionPosition, resetSelection]);
+
+    // ── Tap-to-translate: single tap → word at cursor position ───────────────
+    const tapStartRef = useRef({ x: 0, y: 0, t: 0 });
+
+    const handleContainerClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+        if ((e.target as Element).closest('#translation-tooltip')) return;
+
+        // Skip if text already selected
+        const sel = window.getSelection();
+        if (sel && !sel.isCollapsed && sel.toString().trim().length > 1) return;
+
+        // Only fire if cursor didn't move much (actual click, not drag)
+        const dx = Math.abs(e.clientX - tapStartRef.current.x);
+        const dy = Math.abs(e.clientY - tapStartRef.current.y);
+        if (dx > 8 || dy > 8) return;
+
+        // Get word at click using caret position
+        let range: Range | null = null;
+        if ('caretRangeFromPoint' in document) {
+            range = (document as any).caretRangeFromPoint(e.clientX, e.clientY);
+        } else if ('caretPositionFromPoint' in document) {
+            const pos = (document as any).caretPositionFromPoint(e.clientX, e.clientY);
+            if (pos) {
+                range = (document as Document).createRange();
+                range.setStart(pos.offsetNode, pos.offset);
+                range.collapse(true);
+            }
+        }
+        if (!range) return;
+
+        // Expand to word
+        try {
+            (range as any).expand('word');
+        } catch {
+            const node = range.startContainer;
+            if (node.nodeType !== Node.TEXT_NODE) return;
+            const text = node.textContent || '';
+            let s = range.startOffset;
+            let en = range.startOffset;
+            while (s > 0 && /[\p{L}\p{N}''-]/u.test(text[s - 1])) s--;
+            while (en < text.length && /[\p{L}\p{N}''-]/u.test(text[en])) en++;
+            range.setStart(node, s);
+            range.setEnd(node, en);
+        }
+
+        const word = range.toString().trim();
+        if (!word || word.length < 2) return;
+
+        const rect = range.getBoundingClientRect();
+        if (rect.width === 0 && rect.height === 0) return;
+
+        setSelectedText(word);
+        setSelectionPosition({ x: rect.left + rect.width / 2, y: rect.top });
+    }, [setSelectedText, setSelectionPosition]);
 
     const [fileUrl, setFileUrl] = useState<string | null>(null);
 
@@ -211,6 +263,8 @@ export default function PDFViewer() {
                 className="flex justify-center pt-8 pb-32 relative w-full"
                 onTouchStart={handleTouchStart}
                 onTouchEnd={handleTouchEnd}
+                onMouseDown={(e) => { tapStartRef.current = { x: e.clientX, y: e.clientY, t: Date.now() }; }}
+                onClick={handleContainerClick}
             >
                 {/* Skeleton overlaid on top while loading — Document always rendered */}
                 {isLoading && (

@@ -108,11 +108,13 @@ export default function EpubViewer() {
     const isLargeBookRef = useRef(false);
     const lastPageRef = useRef(currentPage);
 
+    // paginated = one section at a time, reliable prev/next nav.
+    // scrolled-continuous caused scroll-lock on mobile (overflow:hidden conflict).
     const epubOptions = useMemo(() => ({
-        flow: "scrolled-continuous",
-        manager: "continuous",
+        flow: "paginated",
         width: "100%",
         height: "100%",
+        spread: "none",
     }), []);
 
     // ── Build epubData ────────────────────────────────────────────────────────
@@ -202,22 +204,37 @@ export default function EpubViewer() {
 
         try { rendition.themes.fontSize(`${zoomLevel}%`); } catch { /* silent */ }
 
+        // Dark theme via epubjs themes API (proper way — handles internal cascade)
+        try {
+            rendition.themes.default({
+                'html': { 'background': '#0f0f1c !important' },
+                'body': {
+                    'background': '#0f0f1c !important',
+                    'color': '#dddaf5 !important',
+                    'font-family': "'Lora', Georgia, serif !important",
+                    'line-height': '1.8 !important',
+                    'padding': '2em 1.5em !important',
+                },
+                'p': { 'line-height': '1.8 !important', 'margin-bottom': '1em !important' },
+                'a': { 'color': '#818cf8 !important' },
+                'h1,h2,h3,h4,h5,h6': { 'color': '#f1f0ff !important' },
+            });
+        } catch { /* silent */ }
+
         // ── Content hook: runs inside every iframe epubjs creates ─────────────
         rendition.hooks.content.register((contents: { document: Document; window: Window }) => {
             const doc = contents.document;
             const win = contents.window;
             if (!doc || !win) return;
 
-            // ── Typography ─────────────────────────────────────────────────────
+            // Backup CSS injection (reinforces themes.default above)
             const style = doc.createElement('style');
             style.textContent = `
                 html, body {
+                    background: #0f0f1c !important;
+                    color: #dddaf5 !important;
                     font-family: 'Lora', Georgia, serif !important;
                     line-height: 1.8 !important;
-                    padding: 0 8px !important;
-                    overflow: auto !important;
-                    -webkit-overflow-scrolling: touch !important;
-                    touch-action: pan-y !important;
                     -webkit-user-select: text !important;
                     user-select: text !important;
                     -webkit-touch-callout: default !important;
@@ -226,6 +243,8 @@ export default function EpubViewer() {
                 p { line-height: 1.8 !important; margin-bottom: 1em !important; }
                 * { max-width: 100% !important; box-sizing: border-box !important; }
                 img { height: auto !important; }
+                a { color: #818cf8 !important; }
+                h1,h2,h3,h4,h5,h6 { color: #f1f0ff !important; }
             `;
             doc.head.appendChild(style);
 
@@ -476,8 +495,17 @@ export default function EpubViewer() {
                 epubOptions={epubOptions}
                 // @ts-expect-error - partial styles OK at runtime
                 readerStyles={{
-                    container: { overflow: 'hidden', height: '100%', position: 'relative' },
-                    readerArea: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+                    container: {
+                        height: '100%',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        background: '#0f0f1c',
+                    },
+                    readerArea: {
+                        position: 'absolute',
+                        top: 0, left: 0, right: 0, bottom: 0,
+                        background: '#0f0f1c',  // Override react-reader white default
+                    },
                 }}
             />
 
