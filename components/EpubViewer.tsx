@@ -108,48 +108,44 @@ export default function EpubViewer() {
     const isLargeBookRef = useRef(false);
     const lastPageRef = useRef(currentPage);
 
-    // ── Measure container in pixels ───────────────────────────────────────────
-    // react-reader renders EpubView as an inner sub-component with an unstyled
-    // root div (h=auto=0) between our `container` and `readerArea`. Any
-    // percentage height on readerArea → 0. resize() is also unreliable if
-    // called after a 0-dim init.
+    // ── Measure container ONCE for epubjs initial dimensions ─────────────────
+    // react-reader's EpubView sub-component inserts an unstyled root div (h=0)
+    // between our container and readerArea → height:100% resolves to 0 → iframe 0px.
+    // Fix: pass explicit px to epubOptions so epubjs sets iframe size in renderTo().
     //
-    // Fix: DON'T render ReactReader until we have real pixel dimensions.
-    // Pass them in epubOptions so epubjs receives them in renderTo() directly.
-    const [containerPx, setContainerPx] = useState({ w: 0, h: 0 });
+    // CRITICAL: epubOptions MUST be stable after first init. If it changes while
+    // react-reader is still loading, it loops and never finishes (no iframe).
+    // So: capture dimensions ONCE (initSizeSet ref gates further updates).
+    // Window resize → call rendition.resize() directly (no state → no re-init).
+    const [initSize, setInitSize] = useState({ w: 0, h: 0 });
+    const initSizeSet = useRef(false);
 
     useLayoutEffect(() => {
         if (!containerRef.current) return;
         const ro = new ResizeObserver((entries) => {
             const { width, height } = entries[0].contentRect;
-            if (width > 0 && height > 0) {
-                setContainerPx(prev =>
-                    prev.w === Math.floor(width) && prev.h === Math.floor(height)
-                        ? prev
-                        : { w: Math.floor(width), h: Math.floor(height) }
-                );
+            if (width <= 0 || height <= 0) return;
+            if (!initSizeSet.current) {
+                initSizeSet.current = true;
+                setInitSize({ w: Math.floor(width), h: Math.floor(height) });
+            } else if (renditionRef.current) {
+                // Window resize: imperative resize, no state update → no re-init
+                try { (renditionRef.current as any).resize(Math.floor(width), Math.floor(height)); } catch { /* silent */ }
             }
         });
         ro.observe(containerRef.current);
         return () => ro.disconnect();
     }, []);
 
-    // On window resize: resize the rendition to new container dimensions
-    useEffect(() => {
-        if (renditionRef.current && isReaderReady && containerPx.w > 0 && containerPx.h > 0) {
-            try { (renditionRef.current as any).resize(containerPx.w, containerPx.h); } catch { /* silent */ }
-        }
-    }, [containerPx, isReaderReady]);
-
     // paginated = one section at a time, reliable prev/next nav.
-    // Explicit px dimensions → epubjs sets iframe size in renderTo() from the start.
+    // initSize changes exactly once (0→real dims) → epubOptions changes once → one clean init.
     const epubOptions = useMemo(() => ({
         flow: "paginated",
         spread: "none",
         manager: "default",
-        width: containerPx.w || undefined,
-        height: containerPx.h || undefined,
-    }), [containerPx]);
+        width: initSize.w || undefined,
+        height: initSize.h || undefined,
+    }), [initSize]);
 
     // ── Build epubData ────────────────────────────────────────────────────────
     // ROOT FIX: blob URLs have no .epub extension in their path component
@@ -527,7 +523,7 @@ export default function EpubViewer() {
             {/* Only render ReactReader once container dimensions are known.
                 This ensures epubjs receives real px values in renderTo()
                 instead of initializing with 0-height and needing a resize. */}
-            {containerPx.w > 0 && containerPx.h > 0 && <ReactReader
+            {initSize.w > 0 && initSize.h > 0 && <ReactReader
                 url={epubData}
                 location={location}
                 locationChanged={onLocationChanged}
