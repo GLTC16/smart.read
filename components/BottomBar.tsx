@@ -70,21 +70,20 @@ export default function BottomBar({ toggleSidebar }: BottomBarProps) {
     return (
         <AnimatePresence>
         <motion.div
-            className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40"
+            className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-[calc(100vw-1.5rem)] sm:w-auto"
             initial={{ y: 80, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 80, opacity: 0 }}
             transition={{ type: 'spring', damping: 24, stiffness: 280, mass: 0.7 }}
         >
             <div
-                className="flex items-center gap-1 px-3 py-2 rounded-2xl"
+                className="flex items-center gap-0.5 sm:gap-1 px-2 sm:px-3 py-2 rounded-2xl sm:min-w-[420px]"
                 style={{
-                    background: 'rgba(10, 10, 25, 0.85)',
+                    background: 'rgba(10, 10, 25, 0.92)',
                     backdropFilter: 'blur(24px) saturate(180%)',
                     WebkitBackdropFilter: 'blur(24px) saturate(180%)',
                     border: '1px solid rgba(255, 255, 255, 0.08)',
                     boxShadow: '0 8px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06)',
-                    minWidth: '420px',
                 }}
             >
                 {/* Sidebar Toggle */}
@@ -131,8 +130,8 @@ export default function BottomBar({ toggleSidebar }: BottomBarProps) {
                     </button>
 
                     <div
-                        className="flex flex-col items-center justify-center select-none px-4 group"
-                        style={{ minWidth: '160px' }}
+                        className="flex flex-col items-center justify-center select-none px-2 sm:px-4 group"
+                        style={{ minWidth: '100px', maxWidth: '160px', flex: 1 }}
                     >
                         <div className="flex items-center justify-between w-full mb-1">
                             <span className="text-[9px] font-bold uppercase tracking-widest text-indigo-400">
@@ -175,11 +174,11 @@ export default function BottomBar({ toggleSidebar }: BottomBarProps) {
                     </button>
                 </div>
 
-                {/* Divider */}
-                <div style={{ width: '1px', height: '28px', background: 'rgba(255,255,255,0.08)', margin: '0 4px' }} />
+                {/* Divider — hidden on mobile */}
+                <div className="hidden sm:block" style={{ width: '1px', height: '28px', background: 'rgba(255,255,255,0.08)', margin: '0 4px' }} />
 
-                {/* Zoom Controls */}
-                <div className="flex items-center gap-1">
+                {/* Zoom Controls — hidden on mobile (use pinch-to-zoom) */}
+                <div className="hidden sm:flex items-center gap-1">
                     <button
                         onClick={handleZoomOut}
                         disabled={zoomLevel <= 50}
@@ -228,12 +227,9 @@ export default function BottomBar({ toggleSidebar }: BottomBarProps) {
                     </button>
                 </div>
 
-                {/* Divider */}
-                <div style={{ width: '1px', height: '28px', background: 'rgba(255,255,255,0.08)', margin: '0 4px' }} />
-
-                {/* Bilingual toggle — txt and epub */}
+                {/* Bilingual toggle — txt and epub — hidden on mobile */}
                 {(fileType === 'txt' || fileType === 'epub') && (
-                    <>
+                    <div className="hidden sm:flex items-center">
                         <div style={{ width: '1px', height: '28px', background: 'rgba(255,255,255,0.08)', margin: '0 4px' }} />
                         <button
                             onClick={() => setBilingualMode(!isBilingualMode)}
@@ -247,7 +243,7 @@ export default function BottomBar({ toggleSidebar }: BottomBarProps) {
                         >
                             <Languages size={16} />
                         </button>
-                    </>
+                    </div>
                 )}
 
                 {/* Divider */}

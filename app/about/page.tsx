@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import Footer from '@/components/Footer';
+import AdUnit from '@/components/AdUnit';
 import { ArrowLeft, BookOpen, Globe, Shield, Zap, Brain, Users } from 'lucide-react';
 
 export const metadata: Metadata = {
@@ -69,6 +70,8 @@ export default function AboutPage() {
             Toda la arquitectura está diseñada con privacidad en mente: el procesamiento de archivos ocurre en el navegador del usuario, sin enviar el contenido de los libros a ningún servidor externo.
           </p>
         </section>
+
+        <AdUnit slot="1111111111" format="horizontal" className="my-8" />
 
         {/* Contact CTA */}
         <section className="p-6 rounded-2xl text-center" style={{ background: 'rgba(20,184,166,0.06)', border: '1px solid rgba(20,184,166,0.15)' }}>

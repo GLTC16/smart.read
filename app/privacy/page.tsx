@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import Footer from '@/components/Footer';
+import AdUnit from '@/components/AdUnit';
 import { ArrowLeft } from 'lucide-react';
 
 export const metadata: Metadata = {
@@ -112,6 +113,7 @@ export default function PrivacyPage() {
             <p>Podemos actualizar esta política. Notificaremos cambios significativos por correo electrónico (si tienes cuenta) o mediante aviso en el sitio.</p>
           </>
         ))}
+        <AdUnit slot="3333333333" format="horizontal" className="mt-8" />
       </main>
       <Footer />
     </div>

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import Footer from '@/components/Footer';
+import AdUnit from '@/components/AdUnit';
 import { ArrowLeft } from 'lucide-react';
 
 export const metadata: Metadata = {
@@ -95,6 +96,7 @@ export default function TermsPage() {
         {section('12. Contacto', (
           <p>Para cualquier consulta sobre estos Términos: <strong style={{ color: 'var(--text-primary)' }}>support@smartread.app</strong></p>
         ))}
+        <AdUnit slot="4444444444" format="horizontal" className="mt-8" />
       </main>
       <Footer />
     </div>

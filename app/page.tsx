@@ -110,8 +110,8 @@ export default function Home() {
 
   return (
     <main
-      className="flex h-screen overflow-hidden"
-      style={{ background: "var(--bg-base)", color: "var(--text-primary)", fontFamily: "var(--font-ui)" }}
+      className="flex overflow-hidden"
+      style={{ background: "var(--bg-base)", color: "var(--text-primary)", fontFamily: "var(--font-ui)", height: '100dvh' }}
     >
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       <TranslationTooltip />
@@ -230,9 +230,9 @@ export default function Home() {
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
-                className="relative w-full rounded-3xl transition-all duration-300 cursor-pointer"
+                className="relative w-full rounded-3xl transition-all duration-300"
                 style={{
-                  padding: "3rem 2rem",
+                  padding: "2rem 1.5rem",
                   background: isDragOver
                     ? "rgba(99,102,241,0.14)"
                     : "rgba(15,15,30,0.55)",
@@ -243,7 +243,7 @@ export default function Home() {
                     : "0 4px 48px rgba(0,0,0,0.35)",
                 }}
               >
-                <label className="flex flex-col items-center gap-5 cursor-pointer">
+                <label className="flex flex-col items-center gap-4 cursor-pointer">
                   {/* Upload icon */}
                   <div
                     style={{
@@ -252,7 +252,7 @@ export default function Home() {
                     }}
                   >
                     <div
-                      className="p-5 rounded-2xl"
+                      className="p-4 rounded-2xl"
                       style={{
                         background: isDragOver
                           ? "rgba(99,102,241,0.28)"
@@ -263,7 +263,7 @@ export default function Home() {
                       }}
                     >
                       <Upload
-                        className="w-10 h-10"
+                        className="w-9 h-9"
                         style={{
                           color: isDragOver ? "#a5b4fc" : "var(--accent)",
                           transition: "color 0.3s ease",
@@ -275,24 +275,38 @@ export default function Home() {
                   {/* Text */}
                   <div className="text-center">
                     <p
-                      className="text-xl font-bold mb-1"
+                      className="text-lg font-bold mb-1"
                       style={{ color: "var(--text-primary)" }}
                     >
                       {isDragOver ? t.dragTitleActive : t.dragTitle}
                     </p>
-                    <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                    {/* Desktop subtitle */}
+                    <p className="hidden sm:block text-sm" style={{ color: "var(--text-muted)" }}>
                       {t.dragSubtitle}{" "}
                       <span
                         className="font-semibold underline underline-offset-2"
-                        style={{ color: "var(--accent-hover)", cursor: "pointer" }}
+                        style={{ color: "var(--accent-hover)" }}
                       >
                         {t.clickToSelect}
                       </span>
                     </p>
                   </div>
 
+                  {/* Mobile CTA button */}
+                  <div
+                    className="sm:hidden w-full text-center font-bold text-sm py-3 px-6 rounded-2xl"
+                    style={{
+                      background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                      color: "#fff",
+                      boxShadow: "0 4px 24px rgba(99,102,241,0.4)",
+                    }}
+                  >
+                    <BookOpen className="w-4 h-4 inline-block mr-2 -mt-0.5" />
+                    {t.clickToSelect}
+                  </div>
+
                   {/* Format pills */}
-                  <div className="flex gap-3 flex-wrap justify-center">
+                  <div className="flex gap-2 flex-wrap justify-center">
                     {[
                       { ext: "PDF", icon: "📄", bg: "rgba(239,68,68,0.1)", border: "rgba(239,68,68,0.2)" },
                       { ext: "EPUB", icon: "📚", bg: "rgba(99,102,241,0.1)", border: "rgba(99,102,241,0.2)" },
@@ -384,7 +398,7 @@ export default function Home() {
           </div>
         ) : (
           /* ── READER VIEW ─────────────────────────────────── */
-          <div className="flex-1 overflow-hidden pb-24 relative">
+          <div className="flex-1 overflow-hidden relative" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)', marginBottom: '72px' }}>
             <BookViewer />
           </div>
         )}

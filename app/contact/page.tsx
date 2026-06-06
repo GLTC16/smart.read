@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import Footer from '@/components/Footer';
+import AdUnit from '@/components/AdUnit';
 import { ArrowLeft, Mail, MessageCircle, Bug, Lightbulb } from 'lucide-react';
 
 export const metadata: Metadata = {
@@ -39,6 +40,8 @@ export default function ContactPage() {
             </div>
           ))}
         </div>
+
+        <AdUnit slot="2222222222" format="horizontal" className="mb-8" />
 
         {/* Email CTA */}
         <div
