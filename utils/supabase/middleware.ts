@@ -35,7 +35,10 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   const isAuthRoute = request.nextUrl.pathname.startsWith('/login') || request.nextUrl.pathname.startsWith('/register')
-  const isProtectedRoute = request.nextUrl.pathname.startsWith('/profile') || request.nextUrl.pathname.startsWith('/files')
+  const isProtectedRoute =
+    request.nextUrl.pathname.startsWith('/profile') ||
+    request.nextUrl.pathname.startsWith('/files') ||
+    request.nextUrl.pathname.startsWith('/cloud')
 
   if (isProtectedRoute && !user) {
     // If not logged in, redirect to login

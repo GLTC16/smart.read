@@ -54,20 +54,13 @@ export const metadata: Metadata = {
     type: "website",
     locale: "es_ES",
     siteName: "SmartRead",
-    images: [
-      {
-        url: `${BASE_URL}/og-image.png`,
-        width: 1200,
-        height: 630,
-        alt: "SmartRead — Lector inteligente",
-      },
-    ],
+    // og:image provided by app/opengraph-image.tsx (generated, no missing asset)
   },
   twitter: {
     card: "summary_large_image",
     title: "SmartRead — Lee más rápido. Entiende mejor.",
     description: "Lector web gratuito para PDF, EPUB y TXT con traducción instantánea en 8 idiomas.",
-    images: [`${BASE_URL}/og-image.png`],
+    // twitter:image provided by app/twitter-image.tsx
   },
   robots: {
     index: true,
