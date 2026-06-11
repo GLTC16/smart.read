@@ -64,6 +64,21 @@ type TranslationKeys = {
     loadingEpub: string;
     readingFile: string;
     loadingDocument: string;
+
+    // Footer legal links
+    footerAbout: string;
+    footerPrivacy: string;
+    footerTerms: string;
+    footerContact: string;
+
+    // BookViewer / loading states
+    loadingReader: string;
+    loadingTxt: string;
+
+    // TranslationTooltip
+    drag: string;
+    saved: string;
+    saveHighlight: string;
 };
 
 const translations: Record<UILanguage, TranslationKeys> = {
@@ -106,6 +121,15 @@ const translations: Record<UILanguage, TranslationKeys> = {
         loadingDocument: 'Loading document…',
         pageOf: 'Page {current} of {total}',
         chapterOf: 'Chapter {current} of {total}',
+        footerAbout: 'About Us',
+        footerPrivacy: 'Privacy',
+        footerTerms: 'Terms',
+        footerContact: 'Contact',
+        loadingReader: 'Starting reading engine…',
+        loadingTxt: 'Loading text…',
+        drag: 'Drag',
+        saved: 'Saved!',
+        saveHighlight: 'Save to highlights',
     },
     es: {
         heroTitle: 'SmartRead',
@@ -146,6 +170,15 @@ const translations: Record<UILanguage, TranslationKeys> = {
         loadingDocument: 'Cargando documento…',
         pageOf: 'Página {current} de {total}',
         chapterOf: 'Capítulo {current} de {total}',
+        footerAbout: 'Sobre Nosotros',
+        footerPrivacy: 'Privacidad',
+        footerTerms: 'Términos',
+        footerContact: 'Contacto',
+        loadingReader: 'Iniciando motor de lectura…',
+        loadingTxt: 'Cargando texto…',
+        drag: 'Arrastrar',
+        saved: '¡Guardado!',
+        saveHighlight: 'Guardar en highlights',
     },
     it: {
         heroTitle: 'SmartRead',
@@ -186,6 +219,15 @@ const translations: Record<UILanguage, TranslationKeys> = {
         loadingDocument: 'Caricamento documento…',
         pageOf: 'Pagina {current} di {total}',
         chapterOf: 'Capitolo {current} di {total}',
+        footerAbout: 'Chi siamo',
+        footerPrivacy: 'Privacy',
+        footerTerms: 'Termini',
+        footerContact: 'Contatti',
+        loadingReader: 'Avvio del motore di lettura…',
+        loadingTxt: 'Caricamento testo…',
+        drag: 'Trascina',
+        saved: 'Salvato!',
+        saveHighlight: 'Salva negli highlights',
     },
     fr: {
         heroTitle: 'SmartRead',
@@ -226,6 +268,15 @@ const translations: Record<UILanguage, TranslationKeys> = {
         loadingDocument: 'Chargement du document…',
         pageOf: 'Page {current} sur {total}',
         chapterOf: 'Chapitre {current} sur {total}',
+        footerAbout: 'À propos',
+        footerPrivacy: 'Confidentialité',
+        footerTerms: 'Conditions',
+        footerContact: 'Contact',
+        loadingReader: 'Démarrage du moteur de lecture…',
+        loadingTxt: 'Chargement du texte…',
+        drag: 'Déplacer',
+        saved: 'Enregistré !',
+        saveHighlight: 'Enregistrer dans les surlignages',
     },
     de: {
         heroTitle: 'SmartRead',
@@ -266,6 +317,15 @@ const translations: Record<UILanguage, TranslationKeys> = {
         loadingDocument: 'Dokument wird geladen…',
         pageOf: 'Seite {current} von {total}',
         chapterOf: 'Kapitel {current} von {total}',
+        footerAbout: 'Über uns',
+        footerPrivacy: 'Datenschutz',
+        footerTerms: 'Nutzungsbedingungen',
+        footerContact: 'Kontakt',
+        loadingReader: 'Leseprogramm wird gestartet…',
+        loadingTxt: 'Text wird geladen…',
+        drag: 'Ziehen',
+        saved: 'Gespeichert!',
+        saveHighlight: 'In Highlights speichern',
     },
     pt: {
         heroTitle: 'SmartRead',
@@ -306,6 +366,15 @@ const translations: Record<UILanguage, TranslationKeys> = {
         loadingDocument: 'Carregando documento…',
         pageOf: 'Página {current} de {total}',
         chapterOf: 'Capítulo {current} de {total}',
+        footerAbout: 'Sobre nós',
+        footerPrivacy: 'Privacidade',
+        footerTerms: 'Termos',
+        footerContact: 'Contato',
+        loadingReader: 'Iniciando motor de leitura…',
+        loadingTxt: 'Carregando texto…',
+        drag: 'Arrastar',
+        saved: 'Salvo!',
+        saveHighlight: 'Salvar nos destaques',
     },
     ja: {
         heroTitle: 'SmartRead',
@@ -346,6 +415,15 @@ const translations: Record<UILanguage, TranslationKeys> = {
         loadingDocument: 'ドキュメントを読み込み中…',
         pageOf: '{total}ページ中{current}ページ',
         chapterOf: '{total}章中{current}章',
+        footerAbout: '私たちについて',
+        footerPrivacy: 'プライバシー',
+        footerTerms: '利用規約',
+        footerContact: 'お問い合わせ',
+        loadingReader: 'リーダーエンジンを起動中…',
+        loadingTxt: 'テキストを読み込み中…',
+        drag: 'ドラッグ',
+        saved: '保存しました！',
+        saveHighlight: 'ハイライトに保存',
     },
     zh: {
         heroTitle: 'SmartRead',
@@ -386,6 +464,15 @@ const translations: Record<UILanguage, TranslationKeys> = {
         loadingDocument: '正在加载文档…',
         pageOf: '第{current}页，共{total}页',
         chapterOf: '第{current}章，共{total}章',
+        footerAbout: '关于我们',
+        footerPrivacy: '隐私政策',
+        footerTerms: '使用条款',
+        footerContact: '联系我们',
+        loadingReader: '正在启动阅读引擎…',
+        loadingTxt: '正在加载文本…',
+        drag: '拖动',
+        saved: '已保存！',
+        saveHighlight: '保存到高亮',
     },
 };
 

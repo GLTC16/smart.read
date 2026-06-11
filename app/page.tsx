@@ -10,14 +10,20 @@ import { Upload, BookOpen, Zap, Globe, Shield, Loader2 } from "lucide-react";
 import { useState, useCallback, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
 
-const BookViewer = dynamic(() => import("@/components/BookViewer"), {
-  ssr: false,
-  loading: () => (
+function BookViewerFallback() {
+  const { uiLanguage } = useStore();
+  const tFallback = translations[uiLanguage];
+  return (
     <div className="flex-1 flex flex-col items-center justify-center bg-[#0a0a19] text-white">
       <Loader2 className="w-10 h-10 text-indigo-500 animate-spin mb-4" />
-      <p className="text-slate-400">Iniciando motor de lectura...</p>
+      <p className="text-slate-400">{tFallback.loadingReader}</p>
     </div>
-  ),
+  );
+}
+
+const BookViewer = dynamic(() => import("@/components/BookViewer"), {
+  ssr: false,
+  loading: () => <BookViewerFallback />,
 });
 
 export default function Home() {
@@ -379,10 +385,10 @@ export default function Home() {
               </p>
               <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
                 {[
-                  { href: '/about', label: 'Sobre Nosotros' },
-                  { href: '/privacy', label: 'Privacidad' },
-                  { href: '/terms', label: 'Términos' },
-                  { href: '/contact', label: 'Contacto' },
+                  { href: '/about', label: t.footerAbout },
+                  { href: '/privacy', label: t.footerPrivacy },
+                  { href: '/terms', label: t.footerTerms },
+                  { href: '/contact', label: t.footerContact },
                 ].map(({ href, label }) => (
                   <a
                     key={href}

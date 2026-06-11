@@ -252,7 +252,7 @@ export default function TranslationTooltip() {
                                         background: saved ? 'rgba(251,191,36,0.15)' : 'rgba(255,255,255,0.06)',
                                         border: saved ? '1px solid rgba(251,191,36,0.3)' : '1px solid transparent',
                                     }}
-                                    title={saved ? '¡Guardado!' : 'Guardar'}
+                                    title={saved ? t.saved : t.saveHighlight}
                                 >
                                     <Star size={16} fill={saved ? '#fbbf24' : 'none'} />
                                 </button>
@@ -323,7 +323,7 @@ export default function TranslationTooltip() {
                     >
                         <GripHorizontal size={14} style={{ color: isDraggingState ? 'white' : 'var(--accent-hover)' }} />
                         <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: isDraggingState ? 'white' : 'var(--text-secondary)' }}>
-                            Arrastrar
+                            {t.drag}
                         </span>
                     </button>
                     
@@ -429,7 +429,7 @@ export default function TranslationTooltip() {
                                     background: saved ? 'rgba(251,191,36,0.15)' : 'transparent',
                                     border: saved ? '1px solid rgba(251,191,36,0.3)' : '1px solid transparent',
                                 }}
-                                title={saved ? '¡Guardado!' : 'Guardar en highlights'}
+                                title={saved ? t.saved : t.saveHighlight}
                             >
                                 <Star size={14} fill={saved ? '#fbbf24' : 'none'} />
                             </button>

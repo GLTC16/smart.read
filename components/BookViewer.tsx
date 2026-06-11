@@ -4,30 +4,36 @@ import { useStore } from "@/store/useStore";
 import dynamic from "next/dynamic";
 import { Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { useMemo } from "react";
+import translations from "@/lib/translations";
 import BilingualTXTView from "./BilingualTXTView";
 
-const spinnerLoader = (color: string, bg: string, text: string) => (
-    <div className="flex flex-col items-center justify-center gap-4 h-full" style={{ background: 'var(--bg-surface)', minHeight: '400px' }}>
-        <div className="p-4 rounded-2xl" style={{ background: bg, border: `1px solid ${color}30` }}>
-            <Loader2 className="w-8 h-8 animate-spin" style={{ color }} />
+function ViewerLoader({ color, bg, msgKey }: { color: string; bg: string; msgKey: 'loadingPdf' | 'loadingEpub' | 'loadingTxt' }) {
+    const { uiLanguage } = useStore();
+    const t = useMemo(() => translations[uiLanguage], [uiLanguage]);
+    return (
+        <div className="flex flex-col items-center justify-center gap-4 h-full" style={{ background: 'var(--bg-surface)', minHeight: '400px' }}>
+            <div className="p-4 rounded-2xl" style={{ background: bg, border: `1px solid ${color}30` }}>
+                <Loader2 className="w-8 h-8 animate-spin" style={{ color }} />
+            </div>
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{t[msgKey]}</p>
         </div>
-        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{text}</p>
-    </div>
-);
+    );
+}
 
 const PDFViewer = dynamic(() => import("./PDFViewer"), {
     ssr: false,
-    loading: () => spinnerLoader('var(--accent)', 'rgba(99,102,241,0.1)', 'Cargando PDF…'),
+    loading: () => <ViewerLoader color="var(--accent)" bg="rgba(99,102,241,0.1)" msgKey="loadingPdf" />,
 });
 
 const EpubViewer = dynamic(() => import("./EpubViewer"), {
     ssr: false,
-    loading: () => spinnerLoader('var(--teal)', 'rgba(20,184,166,0.1)', 'Cargando EPUB…'),
+    loading: () => <ViewerLoader color="var(--teal)" bg="rgba(20,184,166,0.1)" msgKey="loadingEpub" />,
 });
 
 const TXTViewer = dynamic(() => import("./TXTViewer"), {
     ssr: false,
-    loading: () => spinnerLoader('var(--accent)', 'rgba(99,102,241,0.1)', 'Cargando texto…'),
+    loading: () => <ViewerLoader color="var(--accent)" bg="rgba(99,102,241,0.1)" msgKey="loadingTxt" />,
 });
 
 export default function BookViewer() {
